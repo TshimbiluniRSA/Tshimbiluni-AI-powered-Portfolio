@@ -1,0 +1,9 @@
+# Ignore environment variable files
+.env
+
+# Ignore all Python bytecode files in this directory
+*.cpython-*.pyc
+*.pyc
+
+# (Optional) Ignore all __pycache__ folders, which also contain .pyc files
+__pycache__/

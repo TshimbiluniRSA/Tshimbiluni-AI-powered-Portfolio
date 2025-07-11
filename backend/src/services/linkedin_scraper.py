@@ -1,14 +1,14 @@
-from crawl4ai import Crawl4AI
+from crawl4ai import AsyncWebCrawler
 from sqlalchemy.orm import Session
 from db.models import LinkedInProfile
 from datetime import datetime
 
-def scrape_linkedin_public_profile(url: str) -> dict:
-    crawler = Crawl4AI(url)
-    result = crawler.scrape()
+async def scrape_linkedin_public_profile(url: str) -> dict:
+    async with AsyncWebCrawler() as crawler:
+        result = await crawler.arun(url=url)
 
     return {
-        "username": result.get("title", "").split(" ")[0].lower(),  # crude username
+        "username": result.get("title", "").split(" ")[0].lower() if result.get("title") else "",
         "headline": result.get("meta_title"),
         "summary": result.get("meta_description"),
         "profile_url": url,
