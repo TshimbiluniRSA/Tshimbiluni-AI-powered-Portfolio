@@ -92,13 +92,15 @@ class LinkedInProfile(Base, TimestampMixin):
 
     @hybrid_property
     def is_data_stale(self) -> bool:
-        """Check if the LinkedIn data is older than 7 days."""
+        print('DEBUG last_scraped_at:', self.last_scraped_at, type(self.last_scraped_at), getattr(self.last_scraped_at, "tzinfo", None))
         if not self.last_scraped_at:
             return True
-        return (datetime.now(timezone.utc) - self.last_scraped_at).days >= 7
-
-    def __repr__(self) -> str:
-        return f"<LinkedInProfile(username='{self.username}', name='{self.full_name}')>"
+        last_scraped = self.last_scraped_at
+        if isinstance(last_scraped, str):
+            last_scraped = datetime.fromisoformat(last_scraped)
+        if last_scraped.tzinfo is None or last_scraped.tzinfo.utcoffset(last_scraped) is None:
+            last_scraped = last_scraped.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - last_scraped).days >= 1
 
 
 class CVMetadata(Base, TimestampMixin):

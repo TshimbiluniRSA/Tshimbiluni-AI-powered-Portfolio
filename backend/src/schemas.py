@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Union
 from enum import Enum
 
@@ -159,6 +159,15 @@ class LinkedInProfileResponse(LinkedInProfileBase, BaseResponseModel):
     is_data_stale: bool = Field(
         description="Whether the LinkedIn data is older than 7 days"
     )
+    @validator('last_scraped_at', pre=True, always=True)
+    def patch_last_scraped_at_tz(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, str):
+            v = datetime.fromisoformat(v)
+        if v.tzinfo is None or v.tzinfo.utcoffset(v) is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v
 
 
 # ---------- CV Metadata Schemas ----------
