@@ -1,4 +1,4 @@
-# Backend Dockerfile for Tshimbiluni AI-powered Portfolio
+# Use Python 3.11 slim image
 FROM python:3.11-slim
 
 # Set working directory
@@ -21,20 +21,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY src/ ./src/
 
-# Create directory for SQLite database
+# Create data directory
 RUN mkdir -p /app/data
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/src
-ENV DATABASE_URL=sqlite+aiosqlite:///./data/portfolio.db
-
-# Expose port
+# Expose port (Render will override this)
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/docs || exit 1
-
-# Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application - listen on PORT from environment variable
+CMD uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000}
