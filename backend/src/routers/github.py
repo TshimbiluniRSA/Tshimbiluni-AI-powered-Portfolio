@@ -196,7 +196,8 @@ async def health_check(
 ) -> HealthCheckResponse:
     """Check the health of the GitHub profile service."""
     try:
-        await session.execute(select(1))
+        from sqlalchemy import text
+        await session.execute(text("SELECT 1"))
         db_healthy = True
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")

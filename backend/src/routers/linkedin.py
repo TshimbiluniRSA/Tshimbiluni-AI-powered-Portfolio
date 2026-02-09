@@ -391,7 +391,8 @@ async def health_check(
     """
     try:
         # Check database connectivity
-        await session.execute(select(1))
+        from sqlalchemy import text
+        await session.execute(text("SELECT 1"))
         db_healthy = True
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
