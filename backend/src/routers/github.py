@@ -55,7 +55,7 @@ async def sync_github_profile(
         username = request.username
         # Optionally, check for staleness if not force_refresh (not implemented here)
         logger.info(f"Starting GitHub sync for username: {username}")
-        profile_data = await fetch_github_data(username)
+        profile_data = await fetch_github_data(username, session=session)
         saved_profile = await save_github_profile(session, profile_data)
         logger.info(f"Successfully synced GitHub profile for: {username}")
 
