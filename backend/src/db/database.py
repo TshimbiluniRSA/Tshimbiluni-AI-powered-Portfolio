@@ -10,7 +10,7 @@ load_dotenv()
 
 # Get database URL from environment or use default
 DATABASE_URL = os.getenv("DATABASE_URL")
-ASYNC_DATABASE_URL = os.getenv("ASYNC_DATABASE_URL")
+ASYNC_DATABASE_URL = os.getenv("ASYNC_DATABASE_URL") or DATABASE_URL
 
 # Create async engine with proper configuration
 async_engine = create_async_engine(

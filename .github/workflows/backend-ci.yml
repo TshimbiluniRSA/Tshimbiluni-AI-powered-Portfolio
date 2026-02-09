@@ -87,6 +87,9 @@ jobs:
           -e DATABASE_URL=sqlite+aiosqlite:///./test.db \
           portfolio-backend:${{ github.sha }}
         sleep 10
+        echo "=== Docker logs for debugging ==="
+        docker logs test-backend
+        echo "=== End of docker logs ==="
         curl -f http://localhost:8000/docs || exit 1
         docker stop test-backend
         docker rm test-backend
