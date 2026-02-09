@@ -4,7 +4,7 @@
 
 ## 🌟 Features
 
-- **AI-Powered Chat**: Integrated chat interface supporting multiple LLM providers (LLaMA, OpenAI, Anthropic, Ollama)
+- **AI-Powered Chat**: Integrated chat interface supporting multiple LLM providers (LLaMA, OpenAI, Anthropic, Gemini, Ollama)
 - **GitHub Integration**: Automatic sync and display of GitHub profile data
 - **LinkedIn Integration**: Scrape and display LinkedIn profile information
 - **Responsive Design**: Mobile-first, fully responsive UI
@@ -32,6 +32,7 @@
    # Backend
    cp backend/.env.example backend/.env
    # Edit backend/.env with your API keys and configuration
+   # See SECRETS_SETUP.md for detailed instructions on obtaining and configuring API keys
    
    # Frontend
    cp frontend/.env.example frontend/.env.local
@@ -119,6 +120,7 @@ LLAMA_API_URL=https://api-inference.huggingface.co/models/...
 HUGGINGFACE_TOKEN=your_token_here
 OPENAI_API_KEY=your_key_here
 ANTHROPIC_API_KEY=your_key_here
+GEMINI_API_KEY=your_key_here
 OLLAMA_BASE_URL=http://localhost:11434
 
 # GitHub
@@ -127,6 +129,8 @@ GITHUB_TOKEN=your_github_token
 # Database
 DATABASE_URL=sqlite+aiosqlite:///./portfolio.db
 ```
+
+**📚 For detailed instructions on obtaining and configuring API keys, see [SECRETS_SETUP.md](SECRETS_SETUP.md)**
 
 ### Frontend Environment Variables
 

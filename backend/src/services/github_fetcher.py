@@ -42,7 +42,7 @@ class GitHubService:
     """Service for interacting with the GitHub API."""
     
     def __init__(self):
-        self.api_token = os.getenv("GITHUB_API_TOKEN")
+        self.api_token = os.getenv("GITHUB_TOKEN")
         self.base_url = GITHUB_API_BASE_URL
         self.headers = {
             "Accept": "application/vnd.github+json",

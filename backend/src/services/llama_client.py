@@ -21,6 +21,7 @@ class ModelProvider(str, Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     OLLAMA = "ollama"
+    GEMINI = "gemini"
     LOCAL = "local"
 
 
@@ -38,6 +39,7 @@ class LLMClient:
             ModelProvider.OPENAI: OpenAIProvider(),
             ModelProvider.ANTHROPIC: AnthropicProvider(),
             ModelProvider.OLLAMA: OllamaProvider(),
+            ModelProvider.GEMINI: GeminiProvider(),
         }
         self.default_provider = ModelProvider.LLAMA
         
@@ -56,6 +58,9 @@ class LLMClient:
         
         # Anthropic
         self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+        
+        # Gemini
+        self.gemini_api_key = os.getenv("GEMINI_API_KEY")
         
         # Ollama
         self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -569,6 +574,80 @@ class OllamaProvider(BaseLLMProvider):
         
         prompt_parts.append(f"user: {message}")
         return "\n".join(prompt_parts)
+
+
+class GeminiProvider(BaseLLMProvider):
+    """Provider for Google Gemini models."""
+    
+    async def generate_response(
+        self,
+        message: str,
+        model: Optional[str] = None,
+        context: Optional[List[Dict[str, str]]] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Generate response from Gemini model."""
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise LLMClientError("GEMINI_API_KEY not configured")
+        
+        model = model or "gemini-pro"
+        base_url = "https://generativelanguage.googleapis.com/v1beta"
+        
+        # Prepare messages in Gemini format
+        contents = []
+        if context:
+            for msg in context[-10:]:  # Keep last 10 for context
+                role = "user" if msg.get("role") == "user" else "model"
+                contents.append({
+                    "role": role,
+                    "parts": [{"text": msg.get("content", "")}]
+                })
+        
+        contents.append({
+            "role": "user",
+            "parts": [{"text": message}]
+        })
+        
+        payload = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": kwargs.get("temperature", 0.7),
+                "maxOutputTokens": kwargs.get("max_tokens", 2048),
+            }
+        }
+        
+        url = f"{base_url}/models/{model}:generateContent?key={api_key}"
+        
+        async with httpx.AsyncClient(timeout=60) as client:
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+            
+            result = response.json()
+            
+            # Extract the generated text
+            if "candidates" in result and len(result["candidates"]) > 0:
+                candidate = result["candidates"][0]
+                content = candidate.get("content", {})
+                parts = content.get("parts", [])
+                generated_text = parts[0].get("text", "") if parts else ""
+            else:
+                generated_text = ""
+            
+            # Extract token usage if available
+            usage_metadata = result.get("usageMetadata", {})
+            tokens_used = usage_metadata.get("totalTokenCount", 0)
+            
+            return {
+                "content": generated_text.strip(),
+                "model": model,
+                "tokens_used": tokens_used,
+                "metadata": {
+                    "provider": "gemini",
+                    "prompt_tokens": usage_metadata.get("promptTokenCount", 0),
+                    "candidates_count": len(result.get("candidates", [])),
+                }
+            }
 
 
 # Global service instance
