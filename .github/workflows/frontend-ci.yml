@@ -14,6 +14,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         node-version: ['20.x']
@@ -53,6 +55,8 @@ jobs:
 
   build-docker:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: test
 
     steps:
