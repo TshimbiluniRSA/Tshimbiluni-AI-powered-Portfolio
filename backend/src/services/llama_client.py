@@ -579,6 +579,11 @@ class OllamaProvider(BaseLLMProvider):
 class GeminiProvider(BaseLLMProvider):
     """Provider for Google Gemini models."""
     
+    def __init__(self):
+        """Initialize the Gemini provider."""
+        self.api_key = os.getenv("GEMINI_API_KEY")
+        self.base_url = "https://generativelanguage.googleapis.com/v1beta"
+    
     async def generate_response(
         self,
         message: str,
@@ -587,12 +592,10 @@ class GeminiProvider(BaseLLMProvider):
         **kwargs
     ) -> Dict[str, Any]:
         """Generate response from Gemini model."""
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
+        if not self.api_key:
             raise LLMClientError("GEMINI_API_KEY not configured")
         
         model = model or "gemini-pro"
-        base_url = "https://generativelanguage.googleapis.com/v1beta"
         
         # Prepare messages in Gemini format
         contents = []
@@ -617,37 +620,58 @@ class GeminiProvider(BaseLLMProvider):
             }
         }
         
-        url = f"{base_url}/models/{model}:generateContent?key={api_key}"
+        # Use API key in header (more secure than query parameter)
+        url = f"{self.base_url}/models/{model}:generateContent"
+        headers = {
+            "X-Goog-Api-Key": self.api_key,
+            "Content-Type": "application/json"
+        }
         
-        async with httpx.AsyncClient(timeout=60) as client:
-            response = await client.post(url, json=payload)
-            response.raise_for_status()
-            
-            result = response.json()
-            
-            # Extract the generated text
-            if "candidates" in result and len(result["candidates"]) > 0:
-                candidate = result["candidates"][0]
-                content = candidate.get("content", {})
-                parts = content.get("parts", [])
-                generated_text = parts[0].get("text", "") if parts else ""
-            else:
-                generated_text = ""
-            
-            # Extract token usage if available
-            usage_metadata = result.get("usageMetadata", {})
-            tokens_used = usage_metadata.get("totalTokenCount", 0)
-            
-            return {
-                "content": generated_text.strip(),
-                "model": model,
-                "tokens_used": tokens_used,
-                "metadata": {
-                    "provider": "gemini",
-                    "prompt_tokens": usage_metadata.get("promptTokenCount", 0),
-                    "candidates_count": len(result.get("candidates", [])),
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                response = await client.post(url, json=payload, headers=headers)
+                response.raise_for_status()
+                
+                result = response.json()
+                
+                # Extract the generated text
+                if "candidates" in result and len(result["candidates"]) > 0:
+                    candidate = result["candidates"][0]
+                    content = candidate.get("content", {})
+                    parts = content.get("parts", [])
+                    generated_text = parts[0].get("text", "") if parts else ""
+                else:
+                    generated_text = ""
+                
+                # Extract token usage if available
+                usage_metadata = result.get("usageMetadata", {})
+                tokens_used = usage_metadata.get("totalTokenCount", 0)
+                
+                return {
+                    "content": generated_text.strip(),
+                    "model": model,
+                    "tokens_used": tokens_used,
+                    "metadata": {
+                        "provider": "gemini",
+                        "prompt_tokens": usage_metadata.get("promptTokenCount", 0),
+                        "candidates_count": len(result.get("candidates", [])),
+                    }
                 }
-            }
+        except httpx.HTTPStatusError as e:
+            # Extract detailed error information from Gemini API
+            error_details = "Unknown error"
+            try:
+                error_data = e.response.json()
+                if "error" in error_data:
+                    error_details = error_data["error"].get("message", str(error_data["error"]))
+            except Exception:
+                error_details = e.response.text
+            
+            raise LLMClientError(
+                f"Gemini API error (status {e.response.status_code}): {error_details}"
+            )
+        except httpx.RequestError as e:
+            raise LLMClientError(f"Gemini API request failed: {str(e)}")
 
 
 # Global service instance
