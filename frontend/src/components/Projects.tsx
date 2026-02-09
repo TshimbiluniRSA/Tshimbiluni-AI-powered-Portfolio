@@ -73,14 +73,18 @@ const Projects = () => {
                 </div>
               </div>
               <div className="project-footer">
-                <a href={project.github} target="_blank" rel="noopener noreferrer" className="project-link">
-                  <span>GitHub</span>
-                  <span>→</span>
-                </a>
-                <a href={project.demo} target="_blank" rel="noopener noreferrer" className="project-link">
-                  <span>Live Demo</span>
-                  <span>→</span>
-                </a>
+                {project.github !== '#' && (
+                  <a href={project.github} target="_blank" rel="noopener noreferrer" className="project-link">
+                    <span>GitHub</span>
+                    <span>→</span>
+                  </a>
+                )}
+                {project.demo !== '#' && (
+                  <a href={project.demo} target="_blank" rel="noopener noreferrer" className="project-link">
+                    <span>Live Demo</span>
+                    <span>→</span>
+                  </a>
+                )}
               </div>
             </div>
           ))}

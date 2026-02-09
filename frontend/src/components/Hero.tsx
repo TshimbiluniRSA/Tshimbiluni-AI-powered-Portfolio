@@ -62,7 +62,7 @@ const Hero = () => {
                 View GitHub
               </a>
             )}
-            <button onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })} className="btn btn-secondary">
+            <button type="button" onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })} className="btn btn-secondary">
               View Projects
             </button>
           </div>

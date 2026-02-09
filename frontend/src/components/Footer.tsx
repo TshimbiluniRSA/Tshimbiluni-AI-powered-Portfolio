@@ -18,10 +18,10 @@ const Footer = () => {
           <div className="footer-section">
             <h4>Quick Links</h4>
             <ul className="footer-links">
-              <li><a onClick={() => document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' })}>Home</a></li>
-              <li><a onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}>About</a></li>
-              <li><a onClick={() => document.getElementById('skills')?.scrollIntoView({ behavior: 'smooth' })}>Skills</a></li>
-              <li><a onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}>Projects</a></li>
+              <li><a href="#hero" onClick={(e) => { e.preventDefault(); document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' }); }}>Home</a></li>
+              <li><a href="#about" onClick={(e) => { e.preventDefault(); document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }); }}>About</a></li>
+              <li><a href="#skills" onClick={(e) => { e.preventDefault(); document.getElementById('skills')?.scrollIntoView({ behavior: 'smooth' }); }}>Skills</a></li>
+              <li><a href="#projects" onClick={(e) => { e.preventDefault(); document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' }); }}>Projects</a></li>
             </ul>
           </div>
 
