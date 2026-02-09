@@ -12,13 +12,25 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/portfolio.db")
 ASYNC_DATABASE_URL = os.getenv("ASYNC_DATABASE_URL") or DATABASE_URL
 
+# Determine if we're using SQLite or PostgreSQL
+is_sqlite = "sqlite" in ASYNC_DATABASE_URL.lower()
+
+# Configure connect_args based on database type
+# SQLite-specific parameters should only be used with SQLite
+async_connect_args = {}
+sync_connect_args = {}
+
+if is_sqlite:
+    async_connect_args = {"check_same_thread": False, "timeout": 30}
+    sync_connect_args = {"check_same_thread": False, "timeout": 30}
+
 # Create async engine with proper configuration
 async_engine = create_async_engine(
     ASYNC_DATABASE_URL,
     echo=os.getenv("DEBUG", "false").lower() == "true",
     future=True,
-    connect_args={"check_same_thread": False,"timeout": 30,},
-    poolclass=StaticPool,
+    connect_args=async_connect_args,
+    poolclass=StaticPool if is_sqlite else None,
     pool_pre_ping=True,
     pool_recycle=300,  # Recycle connections every 5 minutes
 )
@@ -27,22 +39,23 @@ async_engine = create_async_engine(
 sync_engine = create_engine(
     DATABASE_URL,
     echo=os.getenv("DEBUG", "false").lower() == "true",
-    connect_args={"check_same_thread": False,"timeout": 30,},
+    connect_args=sync_connect_args,
     pool_pre_ping=True,
     pool_recycle=300,
 )
 
-# Enable WAL mode for better concurrent access
-@event.listens_for(sync_engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    """Set SQLite pragmas for better performance and concurrent access."""
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA synchronous=NORMAL")
-    cursor.execute("PRAGMA cache_size=10000")
-    cursor.execute("PRAGMA temp_store=MEMORY")
-    cursor.execute("PRAGMA mmap_size=268435456")  # 256MB
-    cursor.close()
+# Enable WAL mode for better concurrent access (SQLite only)
+if is_sqlite:
+    @event.listens_for(sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        """Set SQLite pragmas for better performance and concurrent access."""
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA cache_size=10000")
+        cursor.execute("PRAGMA temp_store=MEMORY")
+        cursor.execute("PRAGMA mmap_size=268435456")  # 256MB
+        cursor.close()
 
 # Async session factory
 AsyncSessionLocal = async_sessionmaker(
@@ -102,8 +115,9 @@ async def close_db() -> None:
 async def check_db_health() -> bool:
     """Check database connectivity."""
     try:
+        from sqlalchemy import text
         async with AsyncSessionLocal() as session:
-            await session.execute("SELECT 1")
+            await session.execute(text("SELECT 1"))
             return True
     except Exception:
         return False
