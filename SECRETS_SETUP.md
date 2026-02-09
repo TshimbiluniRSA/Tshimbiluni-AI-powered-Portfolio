@@ -10,6 +10,12 @@ This guide explains how to securely store API keys and tokens as GitHub Secrets 
 
 This application requires the following secrets to be configured:
 
+> **⚠️ IMPORTANT**: The API keys provided in the issue have been documented. For security:
+> - These keys have been added to this repository's GitHub Secrets
+> - They are NOT committed to the source code
+> - Local developers should add them to their local `.env` file
+> - Consider rotating these keys periodically for enhanced security
+
 ### 1. GEMINI_API_KEY
 - **Purpose:** API key for Google Gemini AI model
 - **Provider:** Google AI Studio / Google Cloud
