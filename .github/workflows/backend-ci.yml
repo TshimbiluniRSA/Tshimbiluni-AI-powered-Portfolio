@@ -1,0 +1,88 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/src/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r src/requirements.txt
+        pip install pytest pytest-cov pytest-asyncio httpx
+
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        cd backend/src
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      continue-on-error: true
+
+    - name: Check code style
+      run: |
+        pip install black
+        cd backend
+        black --check src/ || true
+      continue-on-error: true
+
+    - name: Type check with mypy
+      run: |
+        pip install mypy
+        cd backend
+        mypy src/ --ignore-missing-imports || true
+      continue-on-error: true
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build Docker image
+      run: |
+        cd backend
+        docker build -t portfolio-backend:${{ github.sha }} .
+
+    - name: Test Docker image
+      run: |
+        docker run -d --name test-backend -p 8000:8000 \
+          -e DATABASE_URL=sqlite+aiosqlite:///./test.db \
+          portfolio-backend:${{ github.sha }}
+        sleep 10
+        curl -f http://localhost:8000/docs || exit 1
+        docker stop test-backend
+        docker rm test-backend
