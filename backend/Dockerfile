@@ -26,7 +26,7 @@ RUN mkdir -p /app/data
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/src
 ENV DATABASE_URL=sqlite+aiosqlite:///./data/portfolio.db
 
 # Expose port
