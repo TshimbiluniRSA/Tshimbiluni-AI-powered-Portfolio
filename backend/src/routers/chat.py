@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, B
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
-from sqlalchemy import select, desc, func
+from sqlalchemy import select, desc, func, text
 from db.database import get_async_db, get_db
 from db.models import ChatHistory
 from schemas import (
@@ -362,7 +362,7 @@ async def health_check(
     """Check the health of the chat service."""
     try:
         # Check database connectivity
-        await session.execute(select(1))
+        await session.execute(text("SELECT 1"))
         db_healthy = True
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")

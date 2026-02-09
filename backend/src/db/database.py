@@ -1,6 +1,6 @@
 import os
 from typing import AsyncGenerator
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -12,37 +12,53 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/portfolio.db")
 ASYNC_DATABASE_URL = os.getenv("ASYNC_DATABASE_URL") or DATABASE_URL
 
+# Determine if we're using SQLite or PostgreSQL
+is_sqlite = "sqlite" in ASYNC_DATABASE_URL.lower()
+
+# Configure connect_args based on database type
+# SQLite-specific parameters should only be used with SQLite
+async_connect_args = {}
+sync_connect_args = {}
+engine_kwargs = {
+    "echo": os.getenv("DEBUG", "false").lower() == "true",
+    "future": True,
+    "pool_pre_ping": True,
+    "pool_recycle": 300,  # Recycle connections every 5 minutes
+}
+
+if is_sqlite:
+    async_connect_args = {"check_same_thread": False, "timeout": 30}
+    sync_connect_args = {"check_same_thread": False, "timeout": 30}
+    engine_kwargs["poolclass"] = StaticPool
+
 # Create async engine with proper configuration
 async_engine = create_async_engine(
     ASYNC_DATABASE_URL,
-    echo=os.getenv("DEBUG", "false").lower() == "true",
-    future=True,
-    connect_args={"check_same_thread": False,"timeout": 30,},
-    poolclass=StaticPool,
-    pool_pre_ping=True,
-    pool_recycle=300,  # Recycle connections every 5 minutes
+    connect_args=async_connect_args,
+    **engine_kwargs
 )
 
 # Create sync engine for migrations and initial setup
 sync_engine = create_engine(
     DATABASE_URL,
     echo=os.getenv("DEBUG", "false").lower() == "true",
-    connect_args={"check_same_thread": False,"timeout": 30,},
+    connect_args=sync_connect_args,
     pool_pre_ping=True,
     pool_recycle=300,
 )
 
-# Enable WAL mode for better concurrent access
-@event.listens_for(sync_engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    """Set SQLite pragmas for better performance and concurrent access."""
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA synchronous=NORMAL")
-    cursor.execute("PRAGMA cache_size=10000")
-    cursor.execute("PRAGMA temp_store=MEMORY")
-    cursor.execute("PRAGMA mmap_size=268435456")  # 256MB
-    cursor.close()
+# Enable WAL mode for better concurrent access (SQLite only)
+if is_sqlite:
+    @event.listens_for(sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        """Set SQLite pragmas for better performance and concurrent access."""
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA cache_size=10000")
+        cursor.execute("PRAGMA temp_store=MEMORY")
+        cursor.execute("PRAGMA mmap_size=268435456")  # 256MB
+        cursor.close()
 
 # Async session factory
 AsyncSessionLocal = async_sessionmaker(
@@ -103,7 +119,7 @@ async def check_db_health() -> bool:
     """Check database connectivity."""
     try:
         async with AsyncSessionLocal() as session:
-            await session.execute("SELECT 1")
+            await session.execute(text("SELECT 1"))
             return True
     except Exception:
         return False

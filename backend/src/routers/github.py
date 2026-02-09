@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
-from sqlalchemy import select, desc, func
+from sqlalchemy import select, desc, func, text
 from db.database import get_async_db, get_db
 from db.models import GitHubProfile
 from schemas import (
@@ -196,7 +196,7 @@ async def health_check(
 ) -> HealthCheckResponse:
     """Check the health of the GitHub profile service."""
     try:
-        await session.execute(select(1))
+        await session.execute(text("SELECT 1"))
         db_healthy = True
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")

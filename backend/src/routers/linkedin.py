@@ -5,7 +5,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, text
 
 from db.database import get_async_db, get_db
 from db.models import LinkedInProfile
@@ -391,7 +391,7 @@ async def health_check(
     """
     try:
         # Check database connectivity
-        await session.execute(select(1))
+        await session.execute(text("SELECT 1"))
         db_healthy = True
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
