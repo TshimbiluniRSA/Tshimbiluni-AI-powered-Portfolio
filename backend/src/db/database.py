@@ -1,6 +1,6 @@
 import os
 from typing import AsyncGenerator
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -19,20 +19,23 @@ is_sqlite = "sqlite" in ASYNC_DATABASE_URL.lower()
 # SQLite-specific parameters should only be used with SQLite
 async_connect_args = {}
 sync_connect_args = {}
+engine_kwargs = {
+    "echo": os.getenv("DEBUG", "false").lower() == "true",
+    "future": True,
+    "pool_pre_ping": True,
+    "pool_recycle": 300,  # Recycle connections every 5 minutes
+}
 
 if is_sqlite:
     async_connect_args = {"check_same_thread": False, "timeout": 30}
     sync_connect_args = {"check_same_thread": False, "timeout": 30}
+    engine_kwargs["poolclass"] = StaticPool
 
 # Create async engine with proper configuration
 async_engine = create_async_engine(
     ASYNC_DATABASE_URL,
-    echo=os.getenv("DEBUG", "false").lower() == "true",
-    future=True,
     connect_args=async_connect_args,
-    poolclass=StaticPool if is_sqlite else None,
-    pool_pre_ping=True,
-    pool_recycle=300,  # Recycle connections every 5 minutes
+    **engine_kwargs
 )
 
 # Create sync engine for migrations and initial setup
@@ -115,7 +118,6 @@ async def close_db() -> None:
 async def check_db_health() -> bool:
     """Check database connectivity."""
     try:
-        from sqlalchemy import text
         async with AsyncSessionLocal() as session:
             await session.execute(text("SELECT 1"))
             return True
