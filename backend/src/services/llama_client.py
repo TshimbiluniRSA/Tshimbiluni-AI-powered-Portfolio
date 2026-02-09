@@ -30,6 +30,17 @@ class LLMClientError(Exception):
     pass
 
 
+# Provider name to enum mapping
+PROVIDER_MAP = {
+    "llama": ModelProvider.LLAMA,
+    "openai": ModelProvider.OPENAI,
+    "anthropic": ModelProvider.ANTHROPIC,
+    "ollama": ModelProvider.OLLAMA,
+    "gemini": ModelProvider.GEMINI,
+    "local": ModelProvider.LOCAL,
+}
+
+
 class LLMClient:
     """Unified client for various LLM providers."""
     
@@ -43,23 +54,15 @@ class LLMClient:
         }
         
         # Read from environment variable, default to Gemini
-        default_provider_str = os.getenv("DEFAULT_LLM_PROVIDER", "gemini").lower()
-        
-        # Also check LLM_PROVIDER for backward compatibility
-        if not os.getenv("DEFAULT_LLM_PROVIDER"):
+        default_provider_env = os.getenv("DEFAULT_LLM_PROVIDER")
+        if default_provider_env:
+            default_provider_str = default_provider_env.lower()
+        else:
+            # Check LLM_PROVIDER for backward compatibility
             default_provider_str = os.getenv("LLM_PROVIDER", "gemini").lower()
         
         # Map string to enum
-        provider_map = {
-            "llama": ModelProvider.LLAMA,
-            "openai": ModelProvider.OPENAI,
-            "anthropic": ModelProvider.ANTHROPIC,
-            "ollama": ModelProvider.OLLAMA,
-            "gemini": ModelProvider.GEMINI,
-            "local": ModelProvider.LOCAL,
-        }
-        
-        self.default_provider = provider_map.get(default_provider_str, ModelProvider.GEMINI)
+        self.default_provider = PROVIDER_MAP.get(default_provider_str, ModelProvider.GEMINI)
         logger.info(f"LLM Client initialized with default provider: {self.default_provider}")
         
         # Load configuration
