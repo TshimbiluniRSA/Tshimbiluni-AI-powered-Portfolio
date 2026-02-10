@@ -442,3 +442,104 @@ def sync_linkedin_profile_deprecated(
     except Exception as e:
         logger.error(f"Error in deprecated sync endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# OAuth endpoints
+from services.linkedin_oauth import linkedin_oauth_service, LinkedInOAuthError
+from fastapi.responses import RedirectResponse
+import secrets
+
+
+@router.get(
+    "/oauth/login",
+    summary="LinkedIn OAuth Login",
+    description="Initiate LinkedIn OAuth flow"
+)
+async def linkedin_oauth_login():
+    """Redirect to LinkedIn OAuth authorization page."""
+    try:
+        # Generate random state for security
+        state = secrets.token_urlsafe(32)
+        
+        # Get authorization URL
+        auth_url = linkedin_oauth_service.get_authorization_url(state=state)
+        
+        return {
+            "auth_url": auth_url,
+            "state": state,
+            "message": "Redirect user to auth_url to start OAuth flow"
+        }
+    except LinkedInOAuthError as e:
+        raise HTTPException(500, f"OAuth error: {str(e)}")
+
+
+@router.get(
+    "/oauth/callback",
+    summary="LinkedIn OAuth Callback",
+    description="Handle OAuth callback from LinkedIn"
+)
+async def linkedin_oauth_callback(
+    code: str = Query(..., description="Authorization code from LinkedIn"),
+    state: Optional[str] = Query(None, description="State parameter for security")
+):
+    """
+    Handle OAuth callback from LinkedIn.
+    
+    This endpoint receives the authorization code and exchanges it for user information.
+    """
+    try:
+        # Exchange code for access token
+        logger.info("Exchanging authorization code for access token")
+        token_response = await linkedin_oauth_service.exchange_code_for_token(code)
+        access_token = token_response.get("access_token")
+        
+        if not access_token:
+            raise HTTPException(400, "No access token received")
+        
+        # Get user information
+        logger.info("Fetching user information")
+        user_info = await linkedin_oauth_service.get_user_info(access_token)
+        
+        return {
+            "success": True,
+            "user": {
+                "name": user_info.get("name"),
+                "email": user_info.get("email"),
+                "picture": user_info.get("picture"),
+                "sub": user_info.get("sub"),
+            },
+            "message": "Successfully authenticated with LinkedIn"
+        }
+        
+    except LinkedInOAuthError as e:
+        logger.error(f"OAuth callback error: {str(e)}")
+        raise HTTPException(500, f"OAuth error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Unexpected OAuth error: {str(e)}")
+        raise HTTPException(500, f"Unexpected error: {str(e)}")
+
+
+@router.get(
+    "/oauth/userinfo",
+    summary="Get LinkedIn User Info",
+    description="Get user information using access token"
+)
+async def get_linkedin_userinfo(
+    access_token: str = Query(..., description="LinkedIn access token")
+):
+    """Get user information from LinkedIn using access token."""
+    try:
+        user_info = await linkedin_oauth_service.get_user_info(access_token)
+        
+        return {
+            "success": True,
+            "user": {
+                "name": user_info.get("name"),
+                "email": user_info.get("email"),
+                "picture": user_info.get("picture"),
+                "sub": user_info.get("sub"),
+                "given_name": user_info.get("given_name"),
+                "family_name": user_info.get("family_name"),
+            }
+        }
+    except LinkedInOAuthError as e:
+        raise HTTPException(500, f"Failed to get user info: {str(e)}")
