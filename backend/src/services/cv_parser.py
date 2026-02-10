@@ -207,6 +207,6 @@ async def save_cv(
 
 async def get_active_cv(session: AsyncSession, user_id: str = "tshimbiluni") -> Optional[CV]:
     """Get the currently active CV for a user."""
-    stmt = select(CV).where(CV.user_id == user_id, CV.is_active == True)
+    stmt = select(CV).where(CV.user_id == user_id, CV.is_active)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()

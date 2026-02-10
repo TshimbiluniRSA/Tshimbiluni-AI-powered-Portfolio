@@ -717,8 +717,9 @@ def get_llm_client() -> LLMClient:
     return _llm_client_instance
 
 
-# Backward compatibility - maintain global reference but with deprecation path
-llm_client = None  # Will be removed in future version
+# Backward compatibility - set to None to fail early if old code tries to use it
+# This forces migration to get_llm_client() function
+llm_client = None  # Deprecated - use get_llm_client() instead
 
 
 # Backward compatibility function

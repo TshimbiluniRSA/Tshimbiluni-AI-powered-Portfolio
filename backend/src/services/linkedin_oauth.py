@@ -137,5 +137,6 @@ def get_linkedin_oauth_service() -> LinkedInOAuthService:
     return _linkedin_oauth_service_instance
 
 
-# Backward compatibility - maintain global reference but with deprecation path
-linkedin_oauth_service = None  # Will be removed in future version
+# Backward compatibility - set to None to fail early if old code tries to use it
+# This forces migration to get_linkedin_oauth_service() function
+linkedin_oauth_service = None  # Deprecated - use get_linkedin_oauth_service() instead
