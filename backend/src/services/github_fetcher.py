@@ -451,10 +451,10 @@ async def get_github_profile(
         select(GitHubProfile).where(GitHubProfile.username == username.lower())
     )
     return result.scalar_one_or_none()
-        logger.error(f"GitHub API error while syncing {_sanitize_for_log(username)}: {e}")
+
 
 async def sync_github_profile(
-        logger.error(f"Unexpected error while syncing GitHub profile {_sanitize_for_log(username)}: {e}")
+    session: AsyncSession,
     username: str,
     force_refresh: bool = False
 ) -> GitHubProfileResponse:
@@ -463,12 +463,10 @@ async def sync_github_profile(
     
     Args:
         session: Database session
-        safe_username = _sanitize_for_log(username)
-        logger.error(f"GitHub API error while syncing {safe_username}: {e}")
+        username: GitHub username
         force_refresh: Force refresh even if data is not stale
         
-        safe_username = _sanitize_for_log(username)
-        logger.error(f"Unexpected error while syncing GitHub profile {safe_username}: {e}")
+    Returns:
         GitHubProfileResponse with synced data
     """
     try:
@@ -486,11 +484,12 @@ async def sync_github_profile(
         raise
     except Exception as e:
         logger.error(f"Unexpected error while syncing GitHub profile {username}: {e}")
-                logger.info(f"Using cached repositories for {_sanitize_for_log(username)}")
+        raise GitHubAPIError(f"Failed to sync GitHub profile: {e}")
+
 
 async def sync_github_repositories(
     username: str,
-    logger.info(f"Fetching repositories for {_sanitize_for_log(username)} from GitHub API")
+    session: AsyncSession,
     force_refresh: bool = False
 ) -> List[GitHubRepository]:
     """
@@ -500,13 +499,11 @@ async def sync_github_repositories(
         username: GitHub username
         session: Database session
         force_refresh: Force refresh even if cached data exists
-                safe_username = _sanitize_for_log(username)
-                logger.info(f"Using cached repositories for {safe_username}")
+        
     Returns:
         List of cached repository records
     """
-    safe_username = _sanitize_for_log(username)
-    logger.info(f"Fetching repositories for {safe_username} from GitHub API")
+    # Check if we have cached data
     if not force_refresh:
         stmt = select(GitHubRepository).where(
             GitHubRepository.owner_username == username.lower()
@@ -515,7 +512,7 @@ async def sync_github_repositories(
         result = await session.execute(stmt)
         cached_repos = result.scalars().all()
         
-    logger.info(f"Synced {len(saved_repos)} repositories for {_sanitize_for_log(username)}")
+        if cached_repos:
             # Check if data is stale (older than 24 hours)
             latest_sync = max([r.last_synced_at for r in cached_repos])
             if (datetime.now(timezone.utc) - latest_sync).days < 1:
