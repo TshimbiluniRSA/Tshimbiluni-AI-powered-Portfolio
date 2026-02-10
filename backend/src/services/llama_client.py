@@ -629,16 +629,20 @@ class GeminiProvider(BaseLLMProvider):
         temperature = kwargs.get('temperature', 0.7)
         max_tokens = kwargs.get('max_tokens', 2048)
         
-        # Convert messages to Gemini format
+        # Convert messages to Gemini format with proper roles
         contents = []
         if context:
             for msg in context[-10:]:  # Keep last 10 for context
+                # Gemini uses 'user' for user messages and 'model' for assistant messages
+                role = "user" if msg.get("role") in ["user", "human"] else "model"
                 contents.append({
+                    "role": role,
                     "parts": [{"text": msg.get("content", "")}]
                 })
         
-        # Add current message
+        # Add current message (always from user)
         contents.append({
+            "role": "user",
             "parts": [{"text": message}]
         })
         

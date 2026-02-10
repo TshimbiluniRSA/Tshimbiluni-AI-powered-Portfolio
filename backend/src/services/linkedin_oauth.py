@@ -156,11 +156,20 @@ class LinkedInOAuthService:
                     logger.warning(f"Could not fetch email: {str(email_error)}")
                 
                 # Transform v2 profile data to match OpenID Connect format
+                given_name = profile_data.get("localizedFirstName") or None
+                family_name = profile_data.get("localizedLastName") or None
+                
+                # Construct full name, or None if both parts are missing
+                if given_name or family_name:
+                    full_name = f"{given_name or ''} {family_name or ''}".strip()
+                else:
+                    full_name = None
+                
                 user_info = {
                     "sub": profile_data.get("id"),
-                    "name": f"{profile_data.get('localizedFirstName', '')} {profile_data.get('localizedLastName', '')}".strip(),
-                    "given_name": profile_data.get("localizedFirstName"),
-                    "family_name": profile_data.get("localizedLastName"),
+                    "name": full_name,
+                    "given_name": given_name,
+                    "family_name": family_name,
                     "email": email,
                     "picture": None,  # Would need additional API call for profile picture
                 }
