@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional
-from sqlalchemy import (Column, String, Integer, Text, DateTime, Boolean, Index, ForeignKey, JSON, Float, )
+from sqlalchemy import (Column, String, Integer, Text, DateTime, Boolean, Index, ForeignKey, JSON, Float, BigInteger, )
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
@@ -58,6 +58,58 @@ class GitHubProfile(Base, TimestampMixin):
         return (datetime.now(timezone.utc) - last_fetched).days >= 1
 
 
+class GitHubRepository(Base, TimestampMixin):
+    """Store GitHub repository/project information."""
+    __tablename__ = "github_repositories"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    github_id = Column(BigInteger, unique=True, index=True, nullable=False, doc="GitHub's repo ID")
+    owner_username = Column(String(39), ForeignKey("github_profiles.username"), index=True)
+    
+    # Basic Info
+    name = Column(String(100), nullable=False, index=True)
+    full_name = Column(String(200), nullable=False, doc="owner/repo")
+    description = Column(Text)
+    html_url = Column(String(500), nullable=False)
+    
+    # Repository Details
+    language = Column(String(50))
+    languages_data = Column(JSON, doc="Language breakdown e.g. {'Python': 5000, 'JavaScript': 3000}")
+    topics = Column(JSON, doc="Repository topics e.g. ['ai', 'portfolio', 'fastapi']")
+    
+    # Stats
+    stargazers_count = Column(Integer, default=0)
+    watchers_count = Column(Integer, default=0)
+    forks_count = Column(Integer, default=0)
+    open_issues_count = Column(Integer, default=0)
+    size_kb = Column(Integer, doc="Repository size in KB")
+    
+    # Metadata
+    is_fork = Column(Boolean, default=False)
+    is_archived = Column(Boolean, default=False)
+    is_private = Column(Boolean, default=False)
+    default_branch = Column(String(100), default="main")
+    
+    # Dates
+    github_created_at = Column(DateTime(timezone=True))
+    github_updated_at = Column(DateTime(timezone=True))
+    github_pushed_at = Column(DateTime(timezone=True))
+    last_synced_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationship
+    owner = relationship("GitHubProfile", backref="repositories")
+    
+    # Flags
+    is_featured = Column(Boolean, default=False, doc="For portfolio showcase")
+    display_order = Column(Integer, doc="Manual ordering")
+    
+    __table_args__ = (
+        Index('idx_repo_owner_name', 'owner_username', 'name'),
+        Index('idx_repo_featured', 'is_featured', 'display_order'),
+        Index('idx_repo_stars', 'stargazers_count'),
+    )
+
+
 class LinkedInProfile(Base, TimestampMixin):
     __tablename__ = "linkedin_profiles"
 
@@ -103,6 +155,55 @@ class LinkedInProfile(Base, TimestampMixin):
         return (datetime.now(timezone.utc) - last_scraped).days >= 1
 
 
+class CV(Base, TimestampMixin):
+    """Store CV/Resume information with AI-parsed content."""
+    __tablename__ = "cvs"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True, doc="Unique identifier for the CV record")
+    user_id = Column(String(100), index=True, default="tshimbiluni")
+    
+    # File Info
+    filename = Column(String(255), nullable=False, doc="Original filename of the CV")
+    file_path = Column(String(500), nullable=False, doc="Storage path of the CV file")
+    file_size_bytes = Column(Integer, doc="File size in bytes")
+    mime_type = Column(String(100), default="application/pdf", doc="MIME type of the file")
+    
+    # Raw Content
+    full_text = Column(Text, doc="Extracted text from PDF")
+    
+    # AI-Parsed Content
+    summary = Column(Text, doc="AI-generated professional summary")
+    skills = Column(JSON, doc="List of skills e.g. ['Python', 'React', 'FastAPI']")
+    experience = Column(JSON, doc="Work experience e.g. [{title, company, duration, description}]")
+    education = Column(JSON, doc="Education e.g. [{degree, institution, year}]")
+    certifications = Column(JSON, doc="List of certifications")
+    languages_spoken = Column(JSON, doc="Languages e.g. [{language, proficiency}]")
+    
+    # Metadata
+    parsing_status = Column(String(20), default="pending", doc="pending, success, failed")
+    parsing_error = Column(Text, doc="Error message if parsing failed")
+    ai_model_used = Column(String(50), doc="AI model used for parsing e.g. 'gemini-pro'")
+    
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+    parsed_at = Column(DateTime(timezone=True))
+    is_active = Column(Boolean, default=True, doc="Only one active CV at a time")
+    
+    __table_args__ = (
+        Index('idx_cv_user_active', 'user_id', 'is_active'),
+    )
+    
+    @validates('file_size_bytes')
+    def validate_file_size(self, key: str, size: Optional[int]) -> Optional[int]:
+        """Validate file size is reasonable."""
+        if size is not None and size > 10 * 1024 * 1024:  # 10MB
+            raise ValueError("CV file size cannot exceed 10MB")
+        return size
+    
+    def __repr__(self) -> str:
+        return f"<CV(id={self.id}, filename='{self.filename}', status='{self.parsing_status}')>"
+
+
+# Keep CVMetadata for backward compatibility (deprecated)
 class CVMetadata(Base, TimestampMixin):
     __tablename__ = "cv_metadata"
 

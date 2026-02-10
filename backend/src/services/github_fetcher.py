@@ -7,10 +7,10 @@ import logging
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
-from sqlalchemy import select, update
+from sqlalchemy import select, update, desc
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-from db.models import GitHubProfile, APIUsageLog
+from db.models import GitHubProfile, GitHubRepository, APIUsageLog
 from schemas import GitHubProfileResponse, APIProvider
 
 # Configure logging
@@ -260,6 +260,33 @@ class GitHubService:
             endpoint="rate_limit",
             session=session
         )
+    
+    async def fetch_repository_languages(
+        self,
+        owner: str,
+        repo: str,
+        session: Optional[AsyncSession] = None
+    ) -> Dict[str, int]:
+        """
+        Fetch language breakdown for a repository.
+        
+        Args:
+            owner: Repository owner username
+            repo: Repository name
+            session: Database session for logging
+        
+        Returns:
+            Dict mapping language names to bytes of code
+        """
+        try:
+            data = await self._make_request(
+                endpoint=f"repos/{owner}/{repo}/languages",
+                session=session
+            )
+            return data
+        except Exception as e:
+            logger.warning(f"Failed to fetch languages for {owner}/{repo}: {e}")
+            return {}
 
 
 # Service instance
@@ -418,3 +445,120 @@ async def sync_github_profile(
     except Exception as e:
         logger.error(f"Unexpected error while syncing GitHub profile {username}: {e}")
         raise GitHubAPIError(f"Failed to sync GitHub profile: {e}")
+
+async def sync_github_repositories(
+    username: str,
+    session: AsyncSession,
+    force_refresh: bool = False
+) -> List[GitHubRepository]:
+    """
+    Fetch and cache GitHub repositories.
+    
+    Args:
+        username: GitHub username
+        session: Database session
+        force_refresh: Force refresh even if cached data exists
+        
+    Returns:
+        List of cached repository records
+    """
+    # Check if we have cached data
+    if not force_refresh:
+        stmt = select(GitHubRepository).where(
+            GitHubRepository.owner_username == username.lower()
+        ).order_by(GitHubRepository.stargazers_count.desc())
+        
+        result = await session.execute(stmt)
+        cached_repos = result.scalars().all()
+        
+        if cached_repos:
+            # Check if data is stale (older than 24 hours)
+            latest_sync = max([r.last_synced_at for r in cached_repos])
+            if (datetime.now(timezone.utc) - latest_sync).days < 1:
+                logger.info(f"Using cached repositories for {username}")
+                return cached_repos
+    
+    # Fetch fresh data from GitHub API
+    logger.info(f"Fetching repositories for {username} from GitHub API")
+    
+    repos_data = await github_service.fetch_user_repositories(
+        username=username,
+        per_page=100,  # Get up to 100 repos
+        session=session
+    )
+    
+    saved_repos = []
+    for repo_data in repos_data:
+        # Fetch detailed language data
+        languages = await github_service.fetch_repository_languages(
+            owner=username,
+            repo=repo_data["name"],
+            session=session
+        )
+        
+        repo_record = await save_github_repository(
+            session=session,
+            repo_data=repo_data,
+            languages_data=languages,
+            owner_username=username
+        )
+        saved_repos.append(repo_record)
+    
+    logger.info(f"Synced {len(saved_repos)} repositories for {username}")
+    return saved_repos
+
+
+async def save_github_repository(
+    session: AsyncSession,
+    repo_data: Dict[str, Any],
+    languages_data: Dict[str, int],
+    owner_username: str
+) -> GitHubRepository:
+    """Save or update a GitHub repository."""
+    github_id = repo_data["id"]
+    
+    # Check if exists
+    stmt = select(GitHubRepository).where(GitHubRepository.github_id == github_id)
+    result = await session.execute(stmt)
+    existing = result.scalar_one_or_none()
+    
+    repo_info = {
+        "github_id": github_id,
+        "owner_username": owner_username.lower(),
+        "name": repo_data["name"],
+        "full_name": repo_data["full_name"],
+        "description": repo_data.get("description"),
+        "html_url": repo_data["html_url"],
+        "language": repo_data.get("language"),
+        "languages_data": languages_data,
+        "topics": repo_data.get("topics", []),
+        "stargazers_count": repo_data.get("stargazers_count", 0),
+        "watchers_count": repo_data.get("watchers_count", 0),
+        "forks_count": repo_data.get("forks_count", 0),
+        "open_issues_count": repo_data.get("open_issues_count", 0),
+        "size_kb": repo_data.get("size", 0),
+        "is_fork": repo_data.get("fork", False),
+        "is_archived": repo_data.get("archived", False),
+        "is_private": repo_data.get("private", False),
+        "default_branch": repo_data.get("default_branch", "main"),
+        "github_created_at": datetime.fromisoformat(repo_data["created_at"].replace("Z", "+00:00")),
+        "github_updated_at": datetime.fromisoformat(repo_data["updated_at"].replace("Z", "+00:00")),
+        "github_pushed_at": datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00")) if repo_data.get("pushed_at") else None,
+        "last_synced_at": datetime.now(timezone.utc),
+    }
+    
+    if existing:
+        await session.execute(
+            update(GitHubRepository)
+            .where(GitHubRepository.github_id == github_id)
+            .values(**repo_info)
+        )
+    else:
+        new_repo = GitHubRepository(**repo_info)
+        session.add(new_repo)
+    
+    await session.commit()
+    
+    # Return updated record
+    result = await session.execute(stmt)
+    return result.scalar_one()

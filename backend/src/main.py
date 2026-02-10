@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from db.database import init_db, close_db
-from routers import github, linkedin, chat
+from routers import github, linkedin, chat, repositories
 
 # Configure logging
 logging.basicConfig(
@@ -39,6 +39,7 @@ app.add_middleware(
 app.include_router(github.router)
 app.include_router(linkedin.router)
 app.include_router(chat.router)
+app.include_router(repositories.router)
 
 # Redirect root to docs
 @app.get("/", include_in_schema=False)
