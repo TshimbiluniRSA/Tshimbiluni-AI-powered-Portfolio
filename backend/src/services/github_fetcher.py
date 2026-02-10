@@ -17,16 +17,6 @@ from schemas import GitHubProfileResponse, APIProvider
 logger = logging.getLogger(__name__)
 
 
-
-
-def sanitize_for_log(value: Any) -> str:
-    """
-    Sanitize a value for safe logging by removing line-breaking characters.
-
-    This helps prevent log injection via user-controlled input that could
-    otherwise inject new log lines (for example using '\\r' or '\\n').
-    """
-    if value is None:
         return ""
     text = str(value)
     return text.replace("\r", "").replace("\n", "")
