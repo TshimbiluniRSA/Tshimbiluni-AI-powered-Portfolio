@@ -16,6 +16,19 @@ from schemas import GitHubProfileResponse, APIProvider
 # Configure logging
 logger = logging.getLogger(__name__)
 
+
+def sanitize_for_log(value: Any) -> str:
+    """
+    Sanitize a value for safe logging by removing line-breaking characters.
+
+    This helps prevent log injection via user-controlled input that could
+    otherwise inject new log lines (for example using '\\r' or '\\n').
+    """
+    if value is None:
+        return ""
+    text = str(value)
+    return text.replace("\r", "").replace("\n", "")
+
 # Constants
 GITHUB_API_BASE_URL = "https://api.github.com"
 GITHUB_API_VERSION = "2022-11-28"
@@ -285,7 +298,11 @@ class GitHubService:
             )
             return data
         except Exception as e:
-            logger.warning(f"Failed to fetch languages for {owner}/{repo}: {e}")
+            safe_owner = sanitize_for_log(owner)
+            safe_repo = sanitize_for_log(repo)
+            logger.warning(
+                f"Failed to fetch languages for {safe_owner}/{safe_repo}: {e}"
+            )
             return {}
 
 
