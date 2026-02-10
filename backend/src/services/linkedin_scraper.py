@@ -1,4 +1,5 @@
 import logging
+import warnings
 from datetime import datetime, timezone
 from typing import Dict, Optional, Any
 from urllib.parse import urlparse
@@ -11,6 +12,14 @@ from sqlalchemy import select, update
 
 from db.models import LinkedInProfile, APIUsageLog
 from schemas import LinkedInProfileCreate, LinkedInProfileResponse
+
+# Deprecation warning
+warnings.warn(
+    "LinkedIn scraping is deprecated and violates LinkedIn ToS. "
+    "Please use linkedin_oauth.py for OAuth-based authentication.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)

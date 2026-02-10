@@ -24,6 +24,7 @@ from services.linkedin_scraper import (
     linkedin_service_sync,
     LinkedInScrapingError
 )
+from services.linkedin_oauth import linkedin_oauth_service, LinkedInOAuthError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -43,10 +44,11 @@ router = APIRouter(
 @router.post(
     "/sync",
     response_model=SyncResponse,
-    summary="Sync LinkedIn profile",
-    description="Scrape and sync a LinkedIn profile from the provided URL",
+    summary="Sync LinkedIn profile (deprecated)",
+    description="LinkedIn scraping is deprecated. Use OAuth endpoints instead: /linkedin/oauth/authorize",
+    deprecated=True,
     responses={
-        200: {"description": "Profile synced successfully"},
+        200: {"description": "Deprecation notice"},
         400: {"description": "Invalid LinkedIn URL"},
         422: {"description": "Validation Error"},
         500: {"description": "Scraping failed"}
@@ -58,61 +60,91 @@ async def sync_linkedin_profile(
     session: AsyncSession = Depends(get_async_db)
 ) -> SyncResponse:
     """
-    Sync LinkedIn profile data from the provided URL.
+    Sync LinkedIn profile - now requires OAuth authentication.
+    Use /oauth/authorize to connect your LinkedIn account first.
     
-    - **profile_url**: LinkedIn profile URL to scrape
-    - **force_refresh**: Force refresh even if data is not stale
+    **DEPRECATED**: This endpoint uses web scraping which violates LinkedIn's Terms of Service.
+    Please use the OAuth endpoints instead.
     """
+    logger.warning("Deprecated /sync endpoint called. Returning OAuth instructions.")
+    return SyncResponse(
+        success=False,
+        message="LinkedIn sync now requires OAuth. Please use /linkedin/oauth/authorize to connect your account.",
+        errors=["Web scraping is deprecated and violates LinkedIn ToS"],
+        data={"authorization_endpoint": "/api/linkedin/oauth/authorize"},
+        timestamp=datetime.now(timezone.utc)
+    )
+
+
+@router.get(
+    "/oauth/authorize",
+    summary="Start LinkedIn OAuth flow",
+    description="Redirect user to LinkedIn authorization page",
+    responses={
+        200: {"description": "Authorization URL generated"},
+        500: {"description": "OAuth configuration error"}
+    }
+)
+async def linkedin_oauth_authorize():
+    """Initiate LinkedIn OAuth 2.0 authorization flow."""
     try:
-        profile_url = str(request.profile_url)
-        username = linkedin_service._extract_username_from_url(profile_url)
+        import secrets
+        state = secrets.token_urlsafe(32)
+        # In production, store state in session/database for verification
+        auth_url = linkedin_oauth_service.get_authorization_url(state=state)
         
-        logger.info(f"Starting LinkedIn sync for username: {username}")
+        return {
+            "authorization_url": auth_url,
+            "state": state,
+            "message": "Visit the authorization_url to grant access"
+        }
+    except Exception as e:
+        logger.error(f"OAuth authorization error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/oauth/callback",
+    summary="LinkedIn OAuth callback",
+    description="Handle OAuth callback and exchange code for token",
+    responses={
+        200: {"description": "Profile connected successfully"},
+        400: {"description": "OAuth error"},
+        500: {"description": "Authentication failed"}
+    }
+)
+async def linkedin_oauth_callback(
+    code: str,
+    state: Optional[str] = None,
+    session: AsyncSession = Depends(get_async_db)
+):
+    """Handle LinkedIn OAuth callback and fetch profile."""
+    try:
+        # Exchange code for access token
+        token_data = await linkedin_oauth_service.exchange_code_for_token(code, session=session)
+        access_token = token_data.get("access_token")
         
-        # Check if we need to refresh the data
-        if not request.force_refresh:
-            is_stale = await linkedin_service.is_profile_stale(session, username)
-            if not is_stale:
-                # Return existing data
-                existing_profile = await linkedin_service.get_linkedin_profile(session, username)
-                if existing_profile:
-                    logger.info(f"LinkedIn profile for {username} is up to date")
-                    return SyncResponse(
-                        success=True,
-                        message="Profile is up to date",
-                        data=LinkedInProfileResponse.from_orm(existing_profile).__dict__,
-                        timestamp=datetime.now(timezone.utc)
-                    )
+        if not access_token:
+            raise HTTPException(status_code=400, detail="Failed to obtain access token")
         
-        # Scrape the profile
-        profile_data = await linkedin_service.scrape_linkedin_public_profile(
-            url=profile_url,
-            session=session
-        )
+        # Fetch user profile
+        profile_data = await linkedin_oauth_service.get_user_profile(access_token, session=session)
         
         # Save to database
-        saved_profile = await linkedin_service.save_linkedin_profile(session, profile_data)
+        saved_profile = await linkedin_oauth_service.save_linkedin_profile(session, profile_data)
         
-        logger.info(f"Successfully synced LinkedIn profile for: {username}")
+        return {
+            "success": True,
+            "message": "LinkedIn profile connected successfully",
+            "profile": LinkedInProfileResponse.from_orm(saved_profile).__dict__
+        }
         
-        return SyncResponse(
-            success=True,
-            message=f"LinkedIn profile for {username} synced successfully",
-            data=LinkedInProfileResponse.from_orm(saved_profile).__dict__,
-            timestamp=datetime.now(timezone.utc)
-        )
-        
-    except LinkedInScrapingError as e:
-        logger.error(f"LinkedIn scraping error: {str(e)}")
-        return SyncResponse(
-            success=False,
-            message="Failed to scrape LinkedIn profile",
-            errors=[str(e)],
-            timestamp=datetime.now(timezone.utc)
-        )
+    except LinkedInOAuthError as e:
+        logger.error(f"LinkedIn OAuth error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Unexpected error in LinkedIn sync: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+        logger.error(f"OAuth callback error: {str(e)}")
+        raise HTTPException(status_code=500, detail="OAuth authentication failed")
 
 
 @router.get(

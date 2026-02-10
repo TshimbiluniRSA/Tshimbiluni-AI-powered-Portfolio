@@ -65,14 +65,17 @@ class LinkedInProfile(Base, TimestampMixin):
     headline = Column(String(500), doc="Professional headline"
     )
     summary = Column(Text, doc="Professional summary/about section")
-    profile_url = Column(String(500), nullable=False, doc="Full URL to LinkedIn profile")
+    profile_url = Column(String(500), doc="Full URL to LinkedIn profile")
     full_name = Column(String(255), doc="Full name as displayed on LinkedIn")
     location = Column(String(255), doc="Location information")
     industry = Column(String(255), doc="Industry information")
     connections_count = Column(String(50), doc="Number of connections (often shown as '500+' etc.)")
     profile_image_url = Column(String(500), doc="URL to profile image")
+    email = Column(String(255), doc="Email address from OAuth")
     last_scraped_at = Column(DateTime(timezone=True), server_default=func.now(), doc="When the data was last scraped from LinkedIn")
+    last_fetched_at = Column(DateTime(timezone=True), doc="When the data was last fetched via OAuth")
     scraping_successful = Column(Boolean, default=True,doc="Whether the last scraping attempt was successful")
+    oauth_successful = Column(Boolean, default=False, doc="Whether OAuth authentication was successful")
     scraping_error = Column(Text, doc="Error message if scraping failed")
 
     # Add indexes for commonly queried fields
@@ -85,7 +88,7 @@ class LinkedInProfile(Base, TimestampMixin):
     def validate_profile_url(self, key: str, url: str) -> str:
         """Validate LinkedIn profile URL format."""
         if not url:
-            raise ValueError("Profile URL cannot be empty")
+            return url  # Allow None for OAuth profiles
         if not url.startswith(('https://linkedin.com', 'https://www.linkedin.com')):
             raise ValueError("Invalid LinkedIn profile URL")
         return url.strip()
