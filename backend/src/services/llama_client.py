@@ -604,7 +604,12 @@ class GeminiProvider(BaseLLMProvider):
     def __init__(self):
         """Initialize the Gemini provider."""
         self.api_key = os.getenv("GEMINI_API_KEY")
+        if not self.api_key:
+            raise ValueError("GEMINI_API_KEY not configured")
+        
+        # Correct Gemini API endpoint
         self.base_url = "https://generativelanguage.googleapis.com/v1beta"
+        self.model = "gemini-2.0-flash"
     
     async def generate_response(
         self,
@@ -617,36 +622,43 @@ class GeminiProvider(BaseLLMProvider):
         if not self.api_key:
             raise LLMClientError("GEMINI_API_KEY not configured")
         
-        model = model or "gemini-pro"
+        # Use the configured model or allow override
+        model_name = model or self.model
         
-        # Prepare messages in Gemini format
+        # Get temperature and max_tokens from kwargs with defaults
+        temperature = kwargs.get('temperature', 0.7)
+        max_tokens = kwargs.get('max_tokens', 2048)
+        
+        # Convert messages to Gemini format with proper roles
         contents = []
         if context:
             for msg in context[-10:]:  # Keep last 10 for context
-                role = "user" if msg.get("role") == "user" else "model"
+                # Gemini uses 'user' for user messages and 'model' for assistant messages
+                role = "user" if msg.get("role") in ["user", "human"] else "model"
                 contents.append({
                     "role": role,
                     "parts": [{"text": msg.get("content", "")}]
                 })
         
+        # Add current message (always from user)
         contents.append({
             "role": "user",
             "parts": [{"text": message}]
         })
         
+        # Correct Gemini API request format
+        url = f"{self.base_url}/models/{model_name}:generateContent"
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": self.api_key  # Use lowercase as per Gemini docs
+        }
+        
         payload = {
             "contents": contents,
             "generationConfig": {
-                "temperature": kwargs.get("temperature", 0.7),
-                "maxOutputTokens": kwargs.get("max_tokens", 2048),
+                "temperature": temperature,
+                "maxOutputTokens": max_tokens  # Use maxOutputTokens not max_tokens
             }
-        }
-        
-        # Use API key in header (more secure than query parameter)
-        url = f"{self.base_url}/models/{model}:generateContent"
-        headers = {
-            "X-Goog-Api-Key": self.api_key,
-            "Content-Type": "application/json"
         }
         
         try:
@@ -656,7 +668,7 @@ class GeminiProvider(BaseLLMProvider):
                 
                 result = response.json()
                 
-                # Extract the generated text
+                # Extract the generated text from Gemini response format
                 if "candidates" in result and len(result["candidates"]) > 0:
                     candidate = result["candidates"][0]
                     content = candidate.get("content", {})
@@ -671,7 +683,7 @@ class GeminiProvider(BaseLLMProvider):
                 
                 return {
                     "content": generated_text.strip(),
-                    "model": model,
+                    "model": model_name,
                     "tokens_used": tokens_used,
                     "metadata": {
                         "provider": "gemini",

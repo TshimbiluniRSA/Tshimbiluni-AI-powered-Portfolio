@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import './Skills.css';
+import { api } from '../api/client';
 
 const Skills: React.FC = () => {
   const [skills, setSkills] = useState<string[]>([]);
   
   useEffect(() => {
-    fetch('/api/cv/info')
-      .then(res => res.json())
+    api.cv.getInfo()
       .then(data => {
         if (data.skills) {
           setSkills(data.skills);

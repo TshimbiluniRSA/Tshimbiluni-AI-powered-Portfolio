@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './About.css';
+import { api } from '../api/client';
 
 interface CVExperience {
   title: string;
@@ -16,8 +17,7 @@ const About: React.FC = () => {
   const [cvData, setCvData] = useState<CVData | null>(null);
   
   useEffect(() => {
-    fetch('/api/cv/info')
-      .then(res => res.json())
+    api.cv.getInfo()
       .then(setCvData)
       .catch(console.error);
   }, []);
@@ -64,7 +64,7 @@ const About: React.FC = () => {
             
             {/* Add CV Download Button */}
             <button 
-              onClick={() => window.open('/api/cv/download', '_blank')}
+              onClick={() => api.cv.download()}
               className="download-cv-btn"
             >
               📄 Download Resume

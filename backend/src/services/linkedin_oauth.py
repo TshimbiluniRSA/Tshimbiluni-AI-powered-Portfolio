@@ -26,7 +26,11 @@ class LinkedInOAuthService:
         
         self.auth_url = "https://www.linkedin.com/oauth/v2/authorization"
         self.token_url = "https://www.linkedin.com/oauth/v2/accessToken"
+        # Use correct LinkedIn OpenID Connect userinfo endpoint
         self.userinfo_url = "https://api.linkedin.com/v2/userinfo"
+        # Also support the profile API v2 endpoint as fallback
+        self.profile_url = "https://api.linkedin.com/v2/me"
+        self.email_url = "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))"
     
     def get_authorization_url(self, state: Optional[str] = None) -> str:
         """
@@ -41,6 +45,8 @@ class LinkedInOAuthService:
         if not self.client_id or not self.redirect_uri:
             raise LinkedInOAuthError("LinkedIn OAuth not configured")
         
+        # Request appropriate scopes for LinkedIn Sign In with OpenID Connect
+        # Note: 'openid', 'profile', and 'email' are the standard OIDC scopes
         params = {
             "response_type": "code",
             "client_id": self.client_id,
@@ -92,7 +98,11 @@ class LinkedInOAuthService:
     
     async def get_user_info(self, access_token: str) -> Dict[str, Any]:
         """
-        Get user information from LinkedIn.
+        Get user information from LinkedIn using multiple methods.
+        
+        This method tries:
+        1. OpenID Connect userinfo endpoint (preferred for tokens with 'openid' scope)
+        2. Profile API v2 + Email API (fallback for tokens with 'r_liteprofile' or 'r_basicprofile')
         
         Args:
             access_token: LinkedIn access token
@@ -100,19 +110,78 @@ class LinkedInOAuthService:
         Returns:
             User information including name, email, picture
         """
+        # Try OpenID Connect userinfo endpoint first (for Sign In with LinkedIn)
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     self.userinfo_url,
                     headers={"Authorization": f"Bearer {access_token}"}
                 )
-                response.raise_for_status()
-                return response.json()
+                
+                # If successful, return the OpenID Connect userinfo
+                if response.status_code == 200:
+                    logger.info("Successfully fetched user info via OpenID Connect")
+                    return response.json()
+                
+                # Log the error but try fallback method
+                logger.warning(f"OpenID Connect userinfo failed with status {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            logger.warning(f"OpenID Connect userinfo error: {str(e)}, trying fallback")
+        
+        # Fallback: Use LinkedIn Profile API v2
+        try:
+            logger.info("Attempting to fetch user info via Profile API v2")
+            async with httpx.AsyncClient() as client:
+                # Get basic profile info
+                profile_response = await client.get(
+                    self.profile_url,
+                    headers={"Authorization": f"Bearer {access_token}"}
+                )
+                profile_response.raise_for_status()
+                profile_data = profile_response.json()
+                
+                # Get email if available
+                email = None
+                try:
+                    email_response = await client.get(
+                        self.email_url,
+                        headers={"Authorization": f"Bearer {access_token}"}
+                    )
+                    if email_response.status_code == 200:
+                        email_data = email_response.json()
+                        if "elements" in email_data and len(email_data["elements"]) > 0:
+                            email = email_data["elements"][0].get("handle~", {}).get("emailAddress")
+                except Exception as email_error:
+                    logger.warning(f"Could not fetch email: {str(email_error)}")
+                
+                # Transform v2 profile data to match OpenID Connect format
+                given_name = profile_data.get("localizedFirstName") or None
+                family_name = profile_data.get("localizedLastName") or None
+                
+                # Construct full name, or None if both parts are missing
+                if given_name or family_name:
+                    full_name = f"{given_name or ''} {family_name or ''}".strip()
+                else:
+                    full_name = None
+                
+                user_info = {
+                    "sub": profile_data.get("id"),
+                    "name": full_name,
+                    "given_name": given_name,
+                    "family_name": family_name,
+                    "email": email,
+                    "picture": None,  # Would need additional API call for profile picture
+                }
+                
+                logger.info("Successfully fetched user info via Profile API v2")
+                return user_info
+                
         except httpx.HTTPStatusError as e:
-            logger.error(f"LinkedIn userinfo failed: {e.response.text}")
+            logger.error(f"LinkedIn Profile API failed: {e.response.text}")
             raise LinkedInOAuthError(f"Failed to get user info: {e.response.text}")
         except Exception as e:
-            logger.error(f"LinkedIn userinfo error: {str(e)}")
+            logger.error(f"LinkedIn Profile API error: {str(e)}")
             raise LinkedInOAuthError(f"User info error: {str(e)}")
 
 
