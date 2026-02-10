@@ -17,16 +17,6 @@ from schemas import GitHubProfileResponse, APIProvider
 logger = logging.getLogger(__name__)
 
 
-    """
-    Sanitize user-controlled strings before logging to prevent log injection.
-    Currently removes newline and carriage-return characters.
-    """
-    if value is None:
-        return ""
-    # Remove characters that can break log lines
-    return value.replace("\r", "").replace("\n", "")
-
-
 def _sanitize_for_log(value: Any) -> Any:
     """
     Remove characters that could lead to log injection (such as newlines)
