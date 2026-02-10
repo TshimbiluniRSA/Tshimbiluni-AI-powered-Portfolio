@@ -17,6 +17,18 @@ from schemas import GitHubProfileResponse, APIProvider
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_for_log(value: Any) -> Any:
+    """
+    Remove characters that could lead to log injection (such as newlines)
+    from user-controlled strings before logging.
+    """
+    if not isinstance(value, str):
+        return value
+    # Strip carriage returns, newlines, and other non-printable control chars
+    value = value.replace("\r", "").replace("\n", "")
+    return "".join(ch for ch in value if ch >= " " or ch == "\t")
+
+
 def sanitize_for_log(value: Any) -> str:
     """
     Sanitize a value for safe logging by removing line-breaking characters.
@@ -440,10 +452,12 @@ async def sync_github_profile(
     
     Args:
         session: Database session
-        username: GitHub username to sync
+        safe_username = _sanitize_for_log(username)
+        logger.error(f"GitHub API error while syncing {safe_username}: {e}")
         force_refresh: Force refresh even if data is not stale
         
-    Returns:
+        safe_username = _sanitize_for_log(username)
+        logger.error(f"Unexpected error while syncing GitHub profile {safe_username}: {e}")
         GitHubProfileResponse with synced data
     """
     try:
@@ -475,11 +489,13 @@ async def sync_github_repositories(
         username: GitHub username
         session: Database session
         force_refresh: Force refresh even if cached data exists
-        
+                safe_username = _sanitize_for_log(username)
+                logger.info(f"Using cached repositories for {safe_username}")
     Returns:
         List of cached repository records
     """
-    # Check if we have cached data
+    safe_username = _sanitize_for_log(username)
+    logger.info(f"Fetching repositories for {safe_username} from GitHub API")
     if not force_refresh:
         stmt = select(GitHubRepository).where(
             GitHubRepository.owner_username == username.lower()
