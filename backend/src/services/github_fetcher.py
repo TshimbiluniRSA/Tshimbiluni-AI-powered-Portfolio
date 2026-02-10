@@ -7,7 +7,7 @@ import logging
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
-from sqlalchemy import select, update, desc
+from sqlalchemy import select, update
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from db.models import GitHubProfile, GitHubRepository, APIUsageLog
