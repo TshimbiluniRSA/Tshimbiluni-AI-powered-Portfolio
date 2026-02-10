@@ -39,7 +39,7 @@ async def get_featured_repositories(
     """Get featured repositories for portfolio."""
     stmt = select(GitHubRepository).where(
         GitHubRepository.is_featured == True
-    ).order_by(GitHubRepository.display_order, desc(GitHubRepository.stargazers_count))
+    ).order_by(GitHubRepository.display_order.asc(), desc(GitHubRepository.stargazers_count))
     
     result = await session.execute(stmt)
     repos = result.scalars().all()

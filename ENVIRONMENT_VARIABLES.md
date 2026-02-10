@@ -52,9 +52,9 @@ GITHUB_TOKEN=ghp_your_github_token_here
 
 ### OAuth Configuration (for user authentication)
 ```bash
-LINKEDIN_CLIENT_ID=77ef7dtd6xghr5
-LINKEDIN_CLIENT_SECRET=WPL_AP1.CXWxzPNHhZnpgNRr.akqwVQ==
-LINKEDIN_REDIRECT_URI=https://tshimbiluni-ai-powered-portfolio.onrender.com/api/linkedin/oauth/callback
+LINKEDIN_CLIENT_ID=your_linkedin_client_id_here
+LINKEDIN_CLIENT_SECRET=your_linkedin_client_secret_here
+LINKEDIN_REDIRECT_URI=https://your-domain.com/api/linkedin/oauth/callback
 ```
 
 ### Scraping Configuration (optional - for profile scraping)

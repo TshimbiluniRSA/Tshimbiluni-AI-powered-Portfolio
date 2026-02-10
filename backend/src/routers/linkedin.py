@@ -444,7 +444,7 @@ def sync_linkedin_profile_deprecated(
         raise HTTPException(status_code=500, detail=str(e))
 
 # OAuth endpoints
-from services.linkedin_oauth import linkedin_oauth_service, LinkedInOAuthError
+from services.linkedin_oauth import get_linkedin_oauth_service, LinkedInOAuthError
 from fastapi.responses import RedirectResponse
 import secrets
 
@@ -461,6 +461,7 @@ async def linkedin_oauth_login():
         state = secrets.token_urlsafe(32)
         
         # Get authorization URL
+        linkedin_oauth_service = get_linkedin_oauth_service()
         auth_url = linkedin_oauth_service.get_authorization_url(state=state)
         
         return {
@@ -489,6 +490,7 @@ async def linkedin_oauth_callback(
     try:
         # Exchange code for access token
         logger.info("Exchanging authorization code for access token")
+        linkedin_oauth_service = get_linkedin_oauth_service()
         token_response = await linkedin_oauth_service.exchange_code_for_token(code)
         access_token = token_response.get("access_token")
         
@@ -528,6 +530,7 @@ async def get_linkedin_userinfo(
 ):
     """Get user information from LinkedIn using access token."""
     try:
+        linkedin_oauth_service = get_linkedin_oauth_service()
         user_info = await linkedin_oauth_service.get_user_info(access_token)
         
         return {

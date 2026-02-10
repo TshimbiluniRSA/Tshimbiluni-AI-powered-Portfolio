@@ -116,5 +116,26 @@ class LinkedInOAuthService:
             raise LinkedInOAuthError(f"User info error: {str(e)}")
 
 
-# Global service instance
-linkedin_oauth_service = LinkedInOAuthService()
+# Global service instance - lazily initialized
+_linkedin_oauth_service_instance: Optional[LinkedInOAuthService] = None
+
+
+def get_linkedin_oauth_service() -> LinkedInOAuthService:
+    """
+    Get or create the global LinkedIn OAuth service instance (lazy initialization).
+    
+    This ensures the service is only initialized when first needed,
+    allowing environment variables to be loaded first on platforms like Render.
+    
+    Returns:
+        LinkedIn OAuth service instance
+    """
+    global _linkedin_oauth_service_instance
+    if _linkedin_oauth_service_instance is None:
+        _linkedin_oauth_service_instance = LinkedInOAuthService()
+        logger.info("LinkedIn OAuth service initialized lazily")
+    return _linkedin_oauth_service_instance
+
+
+# Backward compatibility - maintain global reference but with deprecation path
+linkedin_oauth_service = None  # Will be removed in future version

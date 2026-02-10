@@ -1,4 +1,5 @@
 import logging
+import json
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional
@@ -98,7 +99,6 @@ CV TEXT:
         )
         
         # Parse JSON response
-        import json
         parsed_data = json.loads(response["response"])
         
         return {

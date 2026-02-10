@@ -466,7 +466,7 @@ async def sync_github_repositories(
     if not force_refresh:
         stmt = select(GitHubRepository).where(
             GitHubRepository.owner_username == username.lower()
-        ).order_by(GitHubRepository.stargazers_count.desc())
+        ).order_by(desc(GitHubRepository.stargazers_count))
         
         result = await session.execute(stmt)
         cached_repos = result.scalars().all()

@@ -1,4 +1,5 @@
 import logging
+import uuid
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -41,8 +42,19 @@ async def upload_cv(
     if file_size > 10 * 1024 * 1024:
         raise HTTPException(400, "File too large (max 10MB)")
     
-    # Save file
-    file_path = CV_STORAGE_DIR / file.filename
+    # Sanitize filename to prevent path traversal
+    # Generate a unique filename while keeping the original extension
+    original_filename = file.filename
+    file_extension = Path(original_filename).suffix.lower()
+    
+    # Validate file extension
+    if file_extension not in ['.pdf']:
+        raise HTTPException(400, "Invalid file extension")
+    
+    # Generate safe filename
+    safe_filename = f"{uuid.uuid4()}{file_extension}"
+    file_path = CV_STORAGE_DIR / safe_filename
+    
     with open(file_path, "wb") as f:
         f.write(content)
     
@@ -51,7 +63,7 @@ async def upload_cv(
         cv_record = await save_cv(
             session=session,
             file_path=file_path,
-            filename=file.filename,
+            filename=original_filename,  # Store original filename for display
             file_size=file_size
         )
         
