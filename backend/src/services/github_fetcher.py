@@ -16,7 +16,72 @@ from schemas import GitHubProfileResponse, APIProvider
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Constants
+GITHUB_API_BASE_URL = "https://api.github.com"
+GITHUB_API_VERSION = "2022-11-28"
+DEFAULT_TIMEOUT = 30
+MAX_RETRIES = 3
+RATE_LIMIT_DELAY = 60  # seconds
 
+
+def _sanitize_for_log(value: str) -> str:
+    """
+    Sanitize user input for logging to prevent log injection attacks.
+    
+    Removes newlines, carriage returns, and other control characters that
+    could be used to forge log entries.
+    
+    Args:
+        value: The string to sanitize
+        
+    Returns:
+        Sanitized string safe for logging
+    """
+    if not value:
+        return ""
+    # Remove newlines, carriage returns, and other control characters
+    sanitized = value.replace('\r', '').replace('\n', '').replace('\t', ' ')
+    # Remove any other control characters (ASCII 0-31 except space)
+    sanitized = ''.join(char if ord(char) >= 32 or char == ' ' else '' for char in sanitized)
+    return sanitized
+
+
+def _validate_github_endpoint(endpoint: str) -> str:
+    """
+    Validate that an endpoint is safe for use with GitHub API.
+    
+    Prevents SSRF attacks by ensuring the endpoint doesn't contain
+    path traversal sequences or unexpected characters.
+    
+    Args:
+        endpoint: The API endpoint to validate
+        
+    Returns:
+        Validated endpoint
+        
+    Raises:
+        ValueError: If the endpoint is invalid
+    """
+    if not endpoint:
+        raise ValueError("Endpoint cannot be empty")
+    
+    # Remove leading/trailing whitespace and slashes
+    endpoint = endpoint.strip().strip('/')
+    
+    # Check for path traversal attempts
+    if '..' in endpoint:
+        raise ValueError("Endpoint contains path traversal sequence")
+    
+    # Check for unexpected protocols or domains
+    if '://' in endpoint or endpoint.startswith('//'):
+        raise ValueError("Endpoint cannot contain protocol or domain")
+    
+    # Only allow alphanumeric, hyphens, underscores, slashes, and query params
+    import re
+    if not re.match(r'^[a-zA-Z0-9/_\-?&=.]+$', endpoint):
+        raise ValueError("Endpoint contains invalid characters")
+    
+    return endpoint
 
 
 class GitHubAPIError(Exception):
@@ -73,7 +138,13 @@ class GitHubService:
             GitHubAPIError: For API-related errors
             GitHubRateLimitError: For rate limit errors
         """
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        # Validate endpoint to prevent SSRF attacks
+        try:
+            validated_endpoint = _validate_github_endpoint(endpoint)
+        except ValueError as e:
+            raise GitHubAPIError(f"Invalid endpoint: {e}")
+        
+        url = f"{self.base_url}/{validated_endpoint}"
         start_time = datetime.now(timezone.utc)
         
         try:
@@ -182,7 +253,8 @@ class GitHubService:
         Returns:
             User profile data
         """
-        logger.info(f"Fetching GitHub profile for user: {username}")
+        safe_username = _sanitize_for_log(username)
+        logger.info(f"Fetching GitHub profile for user: {safe_username}")
         
         profile_data = await self._make_request(
             endpoint=f"users/{username}",
@@ -226,7 +298,8 @@ class GitHubService:
         Returns:
             List of repository data
         """
-        logger.info(f"Fetching repositories for user: {username} (page {page})")
+        safe_username = _sanitize_for_log(username)
+        logger.info(f"Fetching repositories for user: {safe_username} (page {page})")
         
         repos_data = await self._make_request(
             endpoint=f"users/{username}/repos",
@@ -280,8 +353,8 @@ class GitHubService:
             )
             return data
         except Exception as e:
-            safe_owner = sanitize_for_log(owner)
-            safe_repo = sanitize_for_log(repo)
+            safe_owner = _sanitize_for_log(owner)
+            safe_repo = _sanitize_for_log(repo)
             logger.warning(
                 f"Failed to fetch languages for {safe_owner}/{safe_repo}: {e}"
             )
@@ -322,7 +395,8 @@ async def fetch_github_data(
         existing_profile = result.scalar_one_or_none()
         
         if existing_profile and not existing_profile.is_data_stale:
-            logger.info(f"Using cached GitHub data for {username}")
+            safe_username = _sanitize_for_log(username)
+            logger.info(f"Using cached GitHub data for {safe_username}")
             return {
                 "username": existing_profile.username,
                 "bio": existing_profile.bio,
@@ -380,7 +454,8 @@ async def save_github_profile(
             select(GitHubProfile).where(GitHubProfile.username == username)
         )
         updated_profile = result.scalar_one()
-        logger.info(f"Updated GitHub profile for {username}")
+        safe_username = _sanitize_for_log(username)
+        logger.info(f"Updated GitHub profile for {safe_username}")
         return updated_profile
     else:
         # Create new profile
@@ -388,7 +463,8 @@ async def save_github_profile(
         session.add(new_profile)
         await session.commit()
         await session.refresh(new_profile)
-        logger.info(f"Created new GitHub profile for {username}")
+        safe_username = _sanitize_for_log(username)
+        logger.info(f"Created new GitHub profile for {safe_username}")
         return new_profile
 
 
