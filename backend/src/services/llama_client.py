@@ -616,8 +616,6 @@ class GeminiProvider(BaseLLMProvider):
         message: str,
         model: Optional[str] = None,
         context: Optional[List[Dict[str, str]]] = None,
-        temperature: float = 0.7,
-        max_tokens: int = 2048,
         **kwargs
     ) -> Dict[str, Any]:
         """Generate response from Gemini model."""
@@ -626,6 +624,10 @@ class GeminiProvider(BaseLLMProvider):
         
         # Use the configured model or allow override
         model_name = model or self.model
+        
+        # Get temperature and max_tokens from kwargs with defaults
+        temperature = kwargs.get('temperature', 0.7)
+        max_tokens = kwargs.get('max_tokens', 2048)
         
         # Convert messages to Gemini format
         contents = []

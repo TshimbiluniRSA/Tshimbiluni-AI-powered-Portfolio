@@ -190,8 +190,18 @@ export const api = {
       const response = await apiClient.get('/api/cv/info');
       return response.data;
     },
-    download: () => {
-      window.open(`${API_URL}/api/cv/download`, '_blank');
+    download: async () => {
+      try {
+        const downloadUrl = `${API_URL}/api/cv/download`;
+        const result = window.open(downloadUrl, '_blank');
+        if (!result) {
+          // Fallback if popup blocker prevented the window from opening
+          window.location.href = downloadUrl;
+        }
+      } catch (error) {
+        console.error('Failed to download CV:', error);
+        throw error;
+      }
     },
   },
   
