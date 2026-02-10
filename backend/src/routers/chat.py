@@ -17,7 +17,7 @@ from schemas import (
     PaginatedResponse,
     HealthCheckResponse
 )
-from services.llama_client import llm_client, LLMClientError, ModelProvider
+from services.llama_client import get_llm_client, LLMClientError, ModelProvider
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -67,6 +67,7 @@ async def send_message(
                 provider = ModelProvider.OLLAMA
         
         # Send message to LLM
+        llm_client = get_llm_client()
         response_data = await llm_client.chat(
             message=request.message,
             session_id=session_id,
@@ -129,6 +130,7 @@ async def stream_message(
         async def generate_stream():
             """Generate streaming response."""
             try:
+                llm_client = get_llm_client()
                 full_response = ""
                 async for chunk in llm_client.stream_chat(
                     message=request.message,
@@ -369,6 +371,7 @@ async def health_check(
         db_healthy = False
     
     # Check LLM providers (simplified)
+    llm_client = get_llm_client()
     external_apis = {
         "llama": bool(llm_client.llama_endpoint),
         "openai": bool(llm_client.openai_api_key),
@@ -399,6 +402,7 @@ async def simple_chat(
     try:
         logger.warning("Using deprecated chat endpoint")
         
+        llm_client = get_llm_client()
         response_data = await llm_client.chat(
             message=question,
             provider=ModelProvider.LLAMA,
