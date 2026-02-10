@@ -445,7 +445,6 @@ def sync_linkedin_profile_deprecated(
 
 # OAuth endpoints
 from services.linkedin_oauth import get_linkedin_oauth_service, LinkedInOAuthError
-from fastapi.responses import RedirectResponse
 import secrets
 
 
