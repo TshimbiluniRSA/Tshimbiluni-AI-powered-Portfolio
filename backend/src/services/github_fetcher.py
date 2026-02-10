@@ -65,16 +65,16 @@ def _validate_github_endpoint(endpoint: str) -> str:
     if not endpoint:
         raise ValueError("Endpoint cannot be empty")
     
+    # Check for unexpected protocols or domains BEFORE stripping
+    if '://' in endpoint or endpoint.startswith('//'):
+        raise ValueError("Endpoint cannot contain protocol or domain")
+    
     # Remove leading/trailing whitespace and slashes
     endpoint = endpoint.strip().strip('/')
     
     # Check for path traversal attempts
     if '..' in endpoint:
         raise ValueError("Endpoint contains path traversal sequence")
-    
-    # Check for unexpected protocols or domains
-    if '://' in endpoint or endpoint.startswith('//'):
-        raise ValueError("Endpoint cannot contain protocol or domain")
     
     # Only allow alphanumeric, hyphens, underscores, slashes, and query params
     import re
