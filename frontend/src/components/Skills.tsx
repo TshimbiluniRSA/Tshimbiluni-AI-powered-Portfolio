@@ -52,8 +52,8 @@ const Skills: React.FC = () => {
       <div className="container">
         <h2 className="section-title">Skills & Technologies</h2>
         <div className="skills-grid">
-          {Object.entries(skillCategories).map(([category, categorySkills]) => (
-            categorySkills.length > 0 && (
+          {Object.entries(skillCategories).map(([category, categorySkills]) => 
+            categorySkills.length > 0 ? (
               <div key={category} className="skill-category">
                 <h3 className="category-title">{category}</h3>
                 <ul className="skill-list">
@@ -62,8 +62,8 @@ const Skills: React.FC = () => {
                   ))}
                 </ul>
               </div>
-            )
-          ))}
+            ) : null
+          )}
         </div>
       </div>
     </section>

@@ -81,7 +81,7 @@ const Projects: React.FC = () => {
               {/* Stats */}
               <div className="project-stats">
                 <span>⭐ {project.stars || 0}</span>
-                <span>🔱 {project.forks || 0}</span>
+                <span>🍴 {project.forks || 0}</span>
               </div>
               
               <a 
