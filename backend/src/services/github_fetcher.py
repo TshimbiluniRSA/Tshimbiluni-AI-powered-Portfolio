@@ -17,16 +17,6 @@ from schemas import GitHubProfileResponse, APIProvider
 logger = logging.getLogger(__name__)
 
 
-        return ""
-    text = str(value)
-    return text.replace("\r", "").replace("\n", "")
-
-# Constants
-GITHUB_API_BASE_URL = "https://api.github.com"
-GITHUB_API_VERSION = "2022-11-28"
-DEFAULT_TIMEOUT = 30
-MAX_RETRIES = 3
-RATE_LIMIT_DELAY = 60  # seconds
 
 
 class GitHubAPIError(Exception):
