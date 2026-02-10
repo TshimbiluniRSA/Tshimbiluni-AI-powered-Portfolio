@@ -17,6 +17,16 @@ from schemas import GitHubProfileResponse, APIProvider
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_for_log(value: str) -> str:
+    """
+    Sanitize a string for safe inclusion in log messages by
+    removing line breaks and non-printable control characters.
+    """
+    if value is None:
+        return ""
+    return "".join(ch for ch in value if ch.isprintable() and ch not in "\r\n")
+
+
 def _sanitize_for_log(value: Optional[str]) -> str:
     """
     Sanitize user-controlled strings before logging to prevent log injection.
@@ -469,6 +479,7 @@ async def sync_github_profile(
     Returns:
         GitHubProfileResponse with synced data
     """
+    safe_username = _sanitize_for_log(username)
     try:
         # Fetch data from API
         profile_data = await fetch_github_data(username, force_refresh, session)
@@ -480,10 +491,10 @@ async def sync_github_profile(
         return GitHubProfileResponse.model_validate(saved_profile)
         
     except GitHubAPIError as e:
-        logger.error(f"GitHub API error while syncing {username}: {e}")
+        logger.error(f"GitHub API error while syncing {safe_username}: {e}")
         raise
     except Exception as e:
-        logger.error(f"Unexpected error while syncing GitHub profile {username}: {e}")
+        logger.error(f"Unexpected error while syncing GitHub profile {safe_username}: {e}")
         raise GitHubAPIError(f"Failed to sync GitHub profile: {e}")
 
 
@@ -501,6 +512,7 @@ async def sync_github_repositories(
         force_refresh: Force refresh even if cached data exists
         
     Returns:
+    safe_username = _sanitize_for_log(username)
         List of cached repository records
     """
     # Check if we have cached data
@@ -516,11 +528,11 @@ async def sync_github_repositories(
             # Check if data is stale (older than 24 hours)
             latest_sync = max([r.last_synced_at for r in cached_repos])
             if (datetime.now(timezone.utc) - latest_sync).days < 1:
-                logger.info(f"Using cached repositories for {username}")
+                logger.info(f"Using cached repositories for {safe_username}")
                 return cached_repos
     
     # Fetch fresh data from GitHub API
-    logger.info(f"Fetching repositories for {username} from GitHub API")
+    logger.info(f"Fetching repositories for {safe_username} from GitHub API")
     
     repos_data = await github_service.fetch_user_repositories(
         username=username,
@@ -545,7 +557,7 @@ async def sync_github_repositories(
         )
         saved_repos.append(repo_record)
     
-    logger.info(f"Synced {len(saved_repos)} repositories for {username}")
+    logger.info(f"Synced {len(saved_repos)} repositories for {safe_username}")
     return saved_repos
 
 
