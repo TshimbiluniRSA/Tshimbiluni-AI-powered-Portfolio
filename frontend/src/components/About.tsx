@@ -1,42 +1,63 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './About.css';
 
 const About: React.FC = () => {
+  const [cvData, setCvData] = useState<any>(null);
+  
+  useEffect(() => {
+    fetch('/api/cv/info')
+      .then(res => res.json())
+      .then(setCvData)
+      .catch(console.error);
+  }, []);
+
   return (
     <section id="about" className="about">
       <div className="container">
         <h2 className="section-title">About Me</h2>
         <div className="about-content">
           <div className="about-text">
-            <p>
-              I'm a passionate developer specializing in AI-powered applications and modern web technologies.
-              With expertise in both frontend and backend development, I create intelligent solutions
-              that leverage the latest advancements in artificial intelligence.
-            </p>
-            <p>
-              My work focuses on building scalable, user-friendly applications that integrate
-              machine learning and natural language processing to solve real-world problems.
-              I'm constantly exploring new technologies and best practices to deliver
-              exceptional results.
-            </p>
-            <p>
-              When I'm not coding, I enjoy contributing to open-source projects, learning about
-              emerging technologies, and sharing knowledge with the developer community.
-            </p>
+            {cvData?.summary ? (
+              <p>{cvData.summary}</p>
+            ) : (
+              <p>
+                I'm a passionate developer specializing in AI-powered applications and modern web technologies.
+                With expertise in both frontend and backend development, I create intelligent solutions
+                that leverage the latest advancements in artificial intelligence.
+              </p>
+            )}
+            
+            {cvData?.experience && cvData.experience.length > 0 && (
+              <div className="experience-highlight">
+                <h3>Current Role</h3>
+                <p className="role-title">{cvData.experience[0].title}</p>
+                <p className="role-company">{cvData.experience[0].company}</p>
+                <p className="role-duration">{cvData.experience[0].duration}</p>
+              </div>
+            )}
           </div>
+          
           <div className="about-highlights">
             <div className="highlight-card">
               <h3>💻 Full Stack Development</h3>
-              <p>Building end-to-end solutions with modern frameworks</p>
+              <p>React, TypeScript, Python, FastAPI</p>
             </div>
             <div className="highlight-card">
-              <h3>🤖 AI Integration</h3>
-              <p>Implementing LLMs and ML models in production</p>
+              <h3>🤖 AI & Machine Learning</h3>
+              <p>LLMs, NLP, Gemini, OpenAI Integration</p>
             </div>
             <div className="highlight-card">
-              <h3>🚀 Cloud & DevOps</h3>
-              <p>Deploying scalable applications with Docker & CI/CD</p>
+              <h3>🚀 DevOps & Cloud</h3>
+              <p>Docker, CI/CD, PostgreSQL, Render</p>
             </div>
+            
+            {/* Add CV Download Button */}
+            <button 
+              onClick={() => window.open('/api/cv/download', '_blank')}
+              className="download-cv-btn"
+            >
+              📄 Download Resume
+            </button>
           </div>
         </div>
       </div>

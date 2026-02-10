@@ -1,50 +1,86 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './Projects.css';
 
 const Projects: React.FC = () => {
-  const projects = [
-    {
-      title: 'AI-Powered Portfolio',
-      description: 'A modern portfolio with integrated AI chat assistant, GitHub/LinkedIn sync, and responsive design.',
-      technologies: ['React', 'TypeScript', 'FastAPI', 'LLaMA', 'Docker'],
-      github: 'https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio',
-    },
-    {
-      title: 'GitHub Profile Sync',
-      description: 'Automated system for fetching and displaying GitHub profile data with real-time updates.',
-      technologies: ['Python', 'FastAPI', 'SQLAlchemy', 'GitHub API'],
-    },
-    {
-      title: 'Chat with AI',
-      description: 'Conversational AI interface supporting multiple LLM providers including OpenAI and LLaMA.',
-      technologies: ['React', 'Python', 'OpenAI', 'Streaming APIs'],
-    },
-  ];
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        // Fetch featured repositories
+        const response = await fetch('/api/repositories/featured');
+        const data = await response.json();
+        setProjects(data);
+      } catch (error) {
+        console.error('Failed to fetch projects:', error);
+        // Fallback: fetch all repos
+        try {
+          const response = await fetch('/api/repositories/TshimbiluniRSA?size=6');
+          const data = await response.json();
+          setProjects(data.items || []);
+        } catch (fallbackError) {
+          console.error('Fallback fetch failed:', fallbackError);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  if (loading) {
+    return (
+      <section id="projects" className="projects">
+        <div className="container">
+          <h2 className="section-title">Featured Projects</h2>
+          <p className="loading">Loading projects...</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="projects" className="projects">
       <div className="container">
         <h2 className="section-title">Featured Projects</h2>
         <div className="projects-grid">
-          {projects.map((project, index) => (
-            <div key={index} className="project-card">
-              <h3 className="project-title">{project.title}</h3>
-              <p className="project-description">{project.description}</p>
-              <div className="project-technologies">
-                {project.technologies.map((tech, techIndex) => (
-                  <span key={techIndex} className="tech-tag">{tech}</span>
-                ))}
-              </div>
-              {project.github && (
-                <a 
-                  href={project.github} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="project-link"
-                >
-                  View on GitHub →
-                </a>
+          {projects.map((project) => (
+            <div key={project.id} className="project-card">
+              <h3 className="project-title">{project.name}</h3>
+              <p className="project-description">
+                {project.description || 'No description available'}
+              </p>
+              
+              {/* Language badge */}
+              {project.language && (
+                <span className="language-badge">{project.language}</span>
               )}
+              
+              {/* Technologies from topics */}
+              {project.topics && project.topics.length > 0 && (
+                <div className="project-technologies">
+                  {project.topics.slice(0, 5).map((topic: string, idx: number) => (
+                    <span key={idx} className="tech-tag">{topic}</span>
+                  ))}
+                </div>
+              )}
+              
+              {/* Stats */}
+              <div className="project-stats">
+                <span>⭐ {project.stars || 0}</span>
+                <span>🔱 {project.forks || 0}</span>
+              </div>
+              
+              <a 
+                href={project.html_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="project-link"
+              >
+                View on GitHub →
+              </a>
             </div>
           ))}
         </div>
