@@ -2,7 +2,7 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://tshimbiluni-ai-powered-portfolio.onrender.com';
 const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT) || 30000;
 
 // Create axios instance with default config
@@ -182,6 +182,37 @@ export const api = {
   health: async () => {
     const response = await apiClient.get('/chat/health');
     return response.data;
+  },
+  
+  // CV endpoints
+  cv: {
+    getInfo: async () => {
+      const response = await apiClient.get('/api/cv/info');
+      return response.data;
+    },
+    download: () => {
+      window.open(`${API_URL}/api/cv/download`, '_blank');
+    },
+  },
+  
+  // Repository endpoints
+  repositories: {
+    getFeatured: async () => {
+      const response = await apiClient.get('/api/repositories/featured');
+      return response.data;
+    },
+    getByUsername: async (username: string, page: number = 1, size: number = 20) => {
+      const response = await apiClient.get(`/api/repositories/${username}`, {
+        params: { page, size },
+      });
+      return response.data;
+    },
+    sync: async (username: string, forceRefresh: boolean = false) => {
+      const response = await apiClient.post(`/api/repositories/sync/${username}`, null, {
+        params: { force_refresh: forceRefresh },
+      });
+      return response.data;
+    },
   },
 };
 

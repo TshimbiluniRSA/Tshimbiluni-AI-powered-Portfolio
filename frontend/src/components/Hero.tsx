@@ -21,7 +21,7 @@ const Hero: React.FC = () => {
         setGithubProfile(profile);
         
         // Fetch CV data
-        const cv = await fetch('/api/cv/info').then(res => res.json());
+        const cv = await api.cv.getInfo();
         setCvData(cv);
       } catch (error) {
         console.error('Failed to fetch data:', error);

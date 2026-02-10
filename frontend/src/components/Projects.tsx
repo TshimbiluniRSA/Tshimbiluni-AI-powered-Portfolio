@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './Projects.css';
+import { api } from '../api/client';
 
 interface Project {
   id: number;
@@ -20,15 +21,13 @@ const Projects: React.FC = () => {
     const fetchProjects = async () => {
       try {
         // Fetch featured repositories
-        const response = await fetch('/api/repositories/featured');
-        const data = await response.json();
+        const data = await api.repositories.getFeatured();
         setProjects(data);
       } catch (error) {
         console.error('Failed to fetch projects:', error);
         // Fallback: fetch all repos
         try {
-          const response = await fetch('/api/repositories/TshimbiluniRSA?size=6');
-          const data = await response.json();
+          const data = await api.repositories.getByUsername('TshimbiluniRSA', 1, 6);
           setProjects(data.items || []);
         } catch (fallbackError) {
           console.error('Fallback fetch failed:', fallbackError);
