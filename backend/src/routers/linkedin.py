@@ -128,9 +128,10 @@ async def linkedin_oauth_callback(
     3. Deleting the state after validation
     """
     try:
-        # TODO: Implement state validation for CSRF protection
-        # if not state or not validate_state(state):
-        #     raise HTTPException(status_code=400, detail="Invalid state parameter")
+        # TODO: Implement state validation for CSRF protection.
+        # At present, the `state` parameter is accepted but not validated. Integrate
+        # your chosen CSRF/state mechanism here (for example, by comparing `state`
+        # against a value stored in the user's session or database).
         
         # Exchange code for access token
         token_data = await linkedin_oauth_service.exchange_code_for_token(code, session=session)
