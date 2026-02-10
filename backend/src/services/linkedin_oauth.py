@@ -98,7 +98,8 @@ class LinkedInOAuthService:
                         endpoint="/oauth/accessToken",
                         status_code=response.status_code,
                         response_time_ms=response_time_ms,
-                        success=response.is_success
+                        success=response.is_success,
+                        method="POST"
                     )
                 
                 response.raise_for_status()
@@ -149,7 +150,8 @@ class LinkedInOAuthService:
                         endpoint="/v2/userinfo",
                         status_code=profile_response.status_code,
                         response_time_ms=response_time_ms,
-                        success=profile_response.is_success
+                        success=profile_response.is_success,
+                        method="GET"
                     )
                 
                 profile_response.raise_for_status()
@@ -164,13 +166,17 @@ class LinkedInOAuthService:
     
     def _parse_profile_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Parse LinkedIn API profile data into our schema."""
-        # Extract username from profile URL or email
-        username = data.get("email", "").split("@")[0] if data.get("email") else None
+        # Use 'sub' (subject identifier) from OAuth as unique username
+        # This is a unique identifier provided by LinkedIn OAuth
+        username = data.get("sub")
+        if not username:
+            # Fallback to email if sub not available
+            username = data.get("email", "").split("@")[0] if data.get("email") else None
         
         return {
             "username": username,
             "full_name": data.get("name"),
-            "profile_url": data.get("profile", {}).get("url") if isinstance(data.get("profile"), dict) else None,
+            "profile_url": None,  # Profile URL not available with basic scopes
             "profile_image_url": data.get("picture"),
             "email": data.get("email"),
             "headline": None,  # Not available with basic scopes
@@ -225,6 +231,7 @@ class LinkedInOAuthService:
         status_code: int,
         response_time_ms: int,
         success: bool,
+        method: str = "GET",
         error_message: Optional[str] = None
     ) -> None:
         """Log API usage for monitoring."""
@@ -232,7 +239,7 @@ class LinkedInOAuthService:
             log_entry = APIUsageLog(
                 api_provider="linkedin",
                 endpoint=endpoint,
-                method="POST",
+                method=method,
                 status_code=status_code,
                 response_time_ms=response_time_ms,
                 error_message=error_message,

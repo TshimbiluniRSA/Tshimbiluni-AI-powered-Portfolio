@@ -1,4 +1,5 @@
 import logging
+import secrets
 from datetime import datetime, timezone
 from typing import Optional, List
 
@@ -88,7 +89,6 @@ async def sync_linkedin_profile(
 async def linkedin_oauth_authorize():
     """Initiate LinkedIn OAuth 2.0 authorization flow."""
     try:
-        import secrets
         state = secrets.token_urlsafe(32)
         # In production, store state in session/database for verification
         auth_url = linkedin_oauth_service.get_authorization_url(state=state)
@@ -118,8 +118,20 @@ async def linkedin_oauth_callback(
     state: Optional[str] = None,
     session: AsyncSession = Depends(get_async_db)
 ):
-    """Handle LinkedIn OAuth callback and fetch profile."""
+    """
+    Handle LinkedIn OAuth callback and fetch profile.
+    
+    SECURITY NOTE: This implementation does not validate the state parameter.
+    In production, implement CSRF protection by:
+    1. Storing the state in a session/database when generating the auth URL
+    2. Validating the state parameter matches the stored value before proceeding
+    3. Deleting the state after validation
+    """
     try:
+        # TODO: Implement state validation for CSRF protection
+        # if not state or not validate_state(state):
+        #     raise HTTPException(status_code=400, detail="Invalid state parameter")
+        
         # Exchange code for access token
         token_data = await linkedin_oauth_service.exchange_code_for_token(code, session=session)
         access_token = token_data.get("access_token")
