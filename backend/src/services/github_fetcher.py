@@ -17,6 +17,17 @@ from schemas import GitHubProfileResponse, APIProvider
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_for_log(value: Optional[str]) -> str:
+    """
+    Sanitize user-controlled strings before logging to prevent log injection.
+    Currently removes newline and carriage-return characters.
+    """
+    if value is None:
+        return ""
+    # Remove characters that can break log lines
+    return value.replace("\r", "").replace("\n", "")
+
+
 def _sanitize_for_log(value: Any) -> Any:
     """
     Remove characters that could lead to log injection (such as newlines)
@@ -440,10 +451,10 @@ async def get_github_profile(
         select(GitHubProfile).where(GitHubProfile.username == username.lower())
     )
     return result.scalar_one_or_none()
-
+        logger.error(f"GitHub API error while syncing {_sanitize_for_log(username)}: {e}")
 
 async def sync_github_profile(
-    session: AsyncSession,
+        logger.error(f"Unexpected error while syncing GitHub profile {_sanitize_for_log(username)}: {e}")
     username: str,
     force_refresh: bool = False
 ) -> GitHubProfileResponse:
@@ -475,11 +486,11 @@ async def sync_github_profile(
         raise
     except Exception as e:
         logger.error(f"Unexpected error while syncing GitHub profile {username}: {e}")
-        raise GitHubAPIError(f"Failed to sync GitHub profile: {e}")
+                logger.info(f"Using cached repositories for {_sanitize_for_log(username)}")
 
 async def sync_github_repositories(
     username: str,
-    session: AsyncSession,
+    logger.info(f"Fetching repositories for {_sanitize_for_log(username)} from GitHub API")
     force_refresh: bool = False
 ) -> List[GitHubRepository]:
     """
@@ -504,7 +515,7 @@ async def sync_github_repositories(
         result = await session.execute(stmt)
         cached_repos = result.scalars().all()
         
-        if cached_repos:
+    logger.info(f"Synced {len(saved_repos)} repositories for {_sanitize_for_log(username)}")
             # Check if data is stale (older than 24 hours)
             latest_sync = max([r.last_synced_at for r in cached_repos])
             if (datetime.now(timezone.utc) - latest_sync).days < 1:
