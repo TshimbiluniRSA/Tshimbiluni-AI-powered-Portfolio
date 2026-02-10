@@ -1,6 +1,7 @@
 .about {
   padding: 6rem 0;
-  background: #f8f9fa;
+  background: var(--bg-secondary);
+  transition: background 0.3s ease;
 }
 
 .container {
@@ -14,7 +15,7 @@
   font-weight: 700;
   text-align: center;
   margin-bottom: 3rem;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .about-content {
@@ -27,7 +28,7 @@
 .about-text {
   font-size: 1.1rem;
   line-height: 1.8;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .about-text p {
@@ -41,28 +42,71 @@
 }
 
 .highlight-card {
-  background: white;
+  background: var(--card-bg);
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s;
+  box-shadow: 0 2px 8px var(--card-shadow);
+  transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
 }
 
 .highlight-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px var(--card-shadow);
 }
 
 .highlight-card h3 {
   font-size: 1.25rem;
   margin-bottom: 0.5rem;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .highlight-card p {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.95rem;
   margin: 0;
+}
+
+.experience-highlight {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px var(--card-shadow);
+}
+
+.experience-highlight h3 {
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.role-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  margin-bottom: 0.5rem;
+}
+
+.role-company, .role-duration {
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.download-cv-btn {
+  margin-top: 1rem;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
+  width: 100%;
+}
+
+.download-cv-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--card-shadow);
 }
 
 @media (max-width: 968px) {

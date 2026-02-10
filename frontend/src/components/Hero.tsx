@@ -3,24 +3,32 @@ import { api } from '../api/client';
 import type { GitHubProfile } from '../api/client';
 import './Hero.css';
 
+interface CVData {
+  summary?: string;
+}
+
 const Hero: React.FC = () => {
   const [githubProfile, setGithubProfile] = useState<GitHubProfile | null>(null);
+  const [cvData, setCvData] = useState<CVData | null>(null);
   const githubUsername = import.meta.env.VITE_GITHUB_USERNAME || 'TshimbiluniRSA';
 
   useEffect(() => {
-    const fetchGitHubProfile = async () => {
+    const fetchData = async () => {
       try {
-        // Try to sync first
+        // Fetch GitHub profile
         await api.github.sync(githubUsername);
-        // Then fetch the profile
         const profile = await api.github.getProfile(githubUsername);
         setGithubProfile(profile);
+        
+        // Fetch CV data
+        const cv = await fetch('/api/cv/info').then(res => res.json());
+        setCvData(cv);
       } catch (error) {
-        console.error('Failed to fetch GitHub profile:', error);
+        console.error('Failed to fetch data:', error);
       }
     };
 
-    fetchGitHubProfile();
+    fetchData();
   }, [githubUsername]);
 
   return (
@@ -29,14 +37,14 @@ const Hero: React.FC = () => {
         <div className="hero-content">
           <div className="hero-text">
             <h1 className="hero-title">
-              Hi, I'm <span className="highlight">Tshimbiluni</span>
+              Hi, I'm <span className="highlight">{githubProfile?.name || 'Tshimbiluni Nedambale'}</span>
             </h1>
             <h2 className="hero-subtitle">
-              AI-Powered Portfolio Developer
+              {cvData?.summary?.split('.')[0] || 'Full Stack Developer & AI Engineer'}
             </h2>
             <p className="hero-description">
-              Building innovative solutions with cutting-edge AI technology.
-              Passionate about creating intelligent applications that make a difference.
+              {cvData?.summary || githubProfile?.bio || 
+               'Passionate about building intelligent applications that solve real-world problems.'}
             </p>
             <div className="hero-actions">
               <a href="#projects" className="btn btn-primary">View Projects</a>
