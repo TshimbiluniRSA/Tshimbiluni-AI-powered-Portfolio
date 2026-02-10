@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, update
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-from db.models import GitHubProfile, APIUsageLog
+from db.models import GitHubProfile, GitHubRepository, APIUsageLog
 from schemas import GitHubProfileResponse, APIProvider
 
 # Configure logging
@@ -22,6 +22,66 @@ GITHUB_API_VERSION = "2022-11-28"
 DEFAULT_TIMEOUT = 30
 MAX_RETRIES = 3
 RATE_LIMIT_DELAY = 60  # seconds
+
+
+def _sanitize_for_log(value: str) -> str:
+    """
+    Sanitize user input for logging to prevent log injection attacks.
+    
+    Removes newlines, carriage returns, and other control characters that
+    could be used to forge log entries.
+    
+    Args:
+        value: The string to sanitize
+        
+    Returns:
+        Sanitized string safe for logging
+    """
+    if not value:
+        return ""
+    # Remove newlines, carriage returns, and other control characters
+    sanitized = value.replace('\r', '').replace('\n', '').replace('\t', ' ')
+    # Remove any other control characters (ASCII 0-31 except space)
+    sanitized = ''.join(char if ord(char) >= 32 or char == ' ' else '' for char in sanitized)
+    return sanitized
+
+
+def _validate_github_endpoint(endpoint: str) -> str:
+    """
+    Validate that an endpoint is safe for use with GitHub API.
+    
+    Prevents SSRF attacks by ensuring the endpoint doesn't contain
+    path traversal sequences or unexpected characters.
+    
+    Args:
+        endpoint: The API endpoint to validate
+        
+    Returns:
+        Validated endpoint
+        
+    Raises:
+        ValueError: If the endpoint is invalid
+    """
+    if not endpoint:
+        raise ValueError("Endpoint cannot be empty")
+    
+    # Check for unexpected protocols or domains BEFORE stripping
+    if '://' in endpoint or endpoint.startswith('//'):
+        raise ValueError("Endpoint cannot contain protocol or domain")
+    
+    # Remove leading/trailing whitespace and slashes
+    endpoint = endpoint.strip().strip('/')
+    
+    # Check for path traversal attempts
+    if '..' in endpoint:
+        raise ValueError("Endpoint contains path traversal sequence")
+    
+    # Only allow alphanumeric, hyphens, underscores, slashes, and query params
+    import re
+    if not re.match(r'^[a-zA-Z0-9/_\-?&=.]+$', endpoint):
+        raise ValueError("Endpoint contains invalid characters")
+    
+    return endpoint
 
 
 class GitHubAPIError(Exception):
@@ -78,7 +138,13 @@ class GitHubService:
             GitHubAPIError: For API-related errors
             GitHubRateLimitError: For rate limit errors
         """
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        # Validate endpoint to prevent SSRF attacks
+        try:
+            validated_endpoint = _validate_github_endpoint(endpoint)
+        except ValueError as e:
+            raise GitHubAPIError(f"Invalid endpoint: {e}")
+        
+        url = f"{self.base_url}/{validated_endpoint}"
         start_time = datetime.now(timezone.utc)
         
         try:
@@ -187,7 +253,8 @@ class GitHubService:
         Returns:
             User profile data
         """
-        logger.info(f"Fetching GitHub profile for user: {username}")
+        safe_username = _sanitize_for_log(username)
+        logger.info(f"Fetching GitHub profile for user: {safe_username}")
         
         profile_data = await self._make_request(
             endpoint=f"users/{username}",
@@ -231,7 +298,8 @@ class GitHubService:
         Returns:
             List of repository data
         """
-        logger.info(f"Fetching repositories for user: {username} (page {page})")
+        safe_username = _sanitize_for_log(username)
+        logger.info(f"Fetching repositories for user: {safe_username} (page {page})")
         
         repos_data = await self._make_request(
             endpoint=f"users/{username}/repos",
@@ -260,6 +328,37 @@ class GitHubService:
             endpoint="rate_limit",
             session=session
         )
+    
+    async def fetch_repository_languages(
+        self,
+        owner: str,
+        repo: str,
+        session: Optional[AsyncSession] = None
+    ) -> Dict[str, int]:
+        """
+        Fetch language breakdown for a repository.
+        
+        Args:
+            owner: Repository owner username
+            repo: Repository name
+            session: Database session for logging
+        
+        Returns:
+            Dict mapping language names to bytes of code
+        """
+        try:
+            data = await self._make_request(
+                endpoint=f"repos/{owner}/{repo}/languages",
+                session=session
+            )
+            return data
+        except Exception as e:
+            safe_owner = _sanitize_for_log(owner)
+            safe_repo = _sanitize_for_log(repo)
+            logger.warning(
+                f"Failed to fetch languages for {safe_owner}/{safe_repo}: {e}"
+            )
+            return {}
 
 
 # Service instance
@@ -296,7 +395,8 @@ async def fetch_github_data(
         existing_profile = result.scalar_one_or_none()
         
         if existing_profile and not existing_profile.is_data_stale:
-            logger.info(f"Using cached GitHub data for {username}")
+            safe_username = _sanitize_for_log(username)
+            logger.info(f"Using cached GitHub data for {safe_username}")
             return {
                 "username": existing_profile.username,
                 "bio": existing_profile.bio,
@@ -354,7 +454,8 @@ async def save_github_profile(
             select(GitHubProfile).where(GitHubProfile.username == username)
         )
         updated_profile = result.scalar_one()
-        logger.info(f"Updated GitHub profile for {username}")
+        safe_username = _sanitize_for_log(username)
+        logger.info(f"Updated GitHub profile for {safe_username}")
         return updated_profile
     else:
         # Create new profile
@@ -362,7 +463,8 @@ async def save_github_profile(
         session.add(new_profile)
         await session.commit()
         await session.refresh(new_profile)
-        logger.info(f"Created new GitHub profile for {username}")
+        safe_username = _sanitize_for_log(username)
+        logger.info(f"Created new GitHub profile for {safe_username}")
         return new_profile
 
 
@@ -396,12 +498,13 @@ async def sync_github_profile(
     
     Args:
         session: Database session
-        username: GitHub username to sync
+        username: GitHub username
         force_refresh: Force refresh even if data is not stale
         
     Returns:
         GitHubProfileResponse with synced data
     """
+    safe_username = _sanitize_for_log(username)
     try:
         # Fetch data from API
         profile_data = await fetch_github_data(username, force_refresh, session)
@@ -413,8 +516,127 @@ async def sync_github_profile(
         return GitHubProfileResponse.model_validate(saved_profile)
         
     except GitHubAPIError as e:
-        logger.error(f"GitHub API error while syncing {username}: {e}")
+        logger.error(f"GitHub API error while syncing {safe_username}: {e}")
         raise
     except Exception as e:
-        logger.error(f"Unexpected error while syncing GitHub profile {username}: {e}")
+        logger.error(f"Unexpected error while syncing GitHub profile {safe_username}: {e}")
         raise GitHubAPIError(f"Failed to sync GitHub profile: {e}")
+
+
+async def sync_github_repositories(
+    username: str,
+    session: AsyncSession,
+    force_refresh: bool = False
+) -> List[GitHubRepository]:
+    """
+    Fetch and cache GitHub repositories.
+    
+    Args:
+        username: GitHub username
+        session: Database session
+        force_refresh: Force refresh even if cached data exists
+        
+    Returns:
+    safe_username = _sanitize_for_log(username)
+        List of cached repository records
+    """
+    # Check if we have cached data
+    if not force_refresh:
+        stmt = select(GitHubRepository).where(
+            GitHubRepository.owner_username == username.lower()
+        ).order_by(desc(GitHubRepository.stargazers_count))
+        
+        result = await session.execute(stmt)
+        cached_repos = result.scalars().all()
+        
+        if cached_repos:
+            # Check if data is stale (older than 24 hours)
+            latest_sync = max([r.last_synced_at for r in cached_repos])
+            if (datetime.now(timezone.utc) - latest_sync).days < 1:
+                logger.info(f"Using cached repositories for {safe_username}")
+                return cached_repos
+    
+    # Fetch fresh data from GitHub API
+    logger.info(f"Fetching repositories for {safe_username} from GitHub API")
+    
+    repos_data = await github_service.fetch_user_repositories(
+        username=username,
+        per_page=100,  # Get up to 100 repos
+        session=session
+    )
+    
+    saved_repos = []
+    for repo_data in repos_data:
+        # Fetch detailed language data
+        languages = await github_service.fetch_repository_languages(
+            owner=username,
+            repo=repo_data["name"],
+            session=session
+        )
+        
+        repo_record = await save_github_repository(
+            session=session,
+            repo_data=repo_data,
+            languages_data=languages,
+            owner_username=username
+        )
+        saved_repos.append(repo_record)
+    
+    logger.info(f"Synced {len(saved_repos)} repositories for {safe_username}")
+    return saved_repos
+
+
+async def save_github_repository(
+    session: AsyncSession,
+    repo_data: Dict[str, Any],
+    languages_data: Dict[str, int],
+    owner_username: str
+) -> GitHubRepository:
+    """Save or update a GitHub repository."""
+    github_id = repo_data["id"]
+    
+    # Check if exists
+    stmt = select(GitHubRepository).where(GitHubRepository.github_id == github_id)
+    result = await session.execute(stmt)
+    existing = result.scalar_one_or_none()
+    
+    repo_info = {
+        "github_id": github_id,
+        "owner_username": owner_username.lower(),
+        "name": repo_data["name"],
+        "full_name": repo_data["full_name"],
+        "description": repo_data.get("description"),
+        "html_url": repo_data["html_url"],
+        "language": repo_data.get("language"),
+        "languages_data": languages_data,
+        "topics": repo_data.get("topics", []),
+        "stargazers_count": repo_data.get("stargazers_count", 0),
+        "watchers_count": repo_data.get("watchers_count", 0),
+        "forks_count": repo_data.get("forks_count", 0),
+        "open_issues_count": repo_data.get("open_issues_count", 0),
+        "size_kb": repo_data.get("size", 0),
+        "is_fork": repo_data.get("fork", False),
+        "is_archived": repo_data.get("archived", False),
+        "is_private": repo_data.get("private", False),
+        "default_branch": repo_data.get("default_branch", "main"),
+        "github_created_at": datetime.fromisoformat(repo_data["created_at"].replace("Z", "+00:00")),
+        "github_updated_at": datetime.fromisoformat(repo_data["updated_at"].replace("Z", "+00:00")),
+        "github_pushed_at": datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00")) if repo_data.get("pushed_at") else None,
+        "last_synced_at": datetime.now(timezone.utc),
+    }
+    
+    if existing:
+        await session.execute(
+            update(GitHubRepository)
+            .where(GitHubRepository.github_id == github_id)
+            .values(**repo_info)
+        )
+    else:
+        new_repo = GitHubRepository(**repo_info)
+        session.add(new_repo)
+    
+    await session.commit()
+    
+    # Return updated record
+    result = await session.execute(stmt)
+    return result.scalar_one()

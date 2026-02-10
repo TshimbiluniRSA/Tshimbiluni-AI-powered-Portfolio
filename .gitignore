@@ -31,3 +31,9 @@ data/
 *.tmp
 *.temp
 .cache/
+
+# CV uploads (keep directory structure but ignore uploaded files)
+backend/data/cvs/*.pdf
+backend/data/cvs/*.doc
+backend/data/cvs/*.docx
+!backend/data/cvs/.gitkeep

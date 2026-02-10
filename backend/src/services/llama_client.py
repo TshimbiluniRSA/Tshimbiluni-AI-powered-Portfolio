@@ -696,8 +696,31 @@ class GeminiProvider(BaseLLMProvider):
             raise LLMClientError(f"Gemini API request failed: {str(e)}")
 
 
-# Global service instance
-llm_client = LLMClient()
+# Global service instance - lazily initialized
+_llm_client_instance: Optional[LLMClient] = None
+
+
+def get_llm_client() -> LLMClient:
+    """
+    Get or create the global LLM client instance (lazy initialization).
+    
+    This ensures the client is only initialized when first needed,
+    allowing environment variables to be loaded first on platforms like Render.
+    
+    Returns:
+        LLM client instance
+    """
+    global _llm_client_instance
+    if _llm_client_instance is None:
+        _llm_client_instance = LLMClient()
+        logger.info("LLM client initialized lazily")
+    return _llm_client_instance
+
+
+# Backward compatibility - set to None to fail early if old code tries to use it
+# This forces migration to get_llm_client() function
+llm_client = None  # Deprecated - use get_llm_client() instead
+
 
 # Backward compatibility function
 async def ask_llama(question: str) -> str:
@@ -714,7 +737,8 @@ async def ask_llama(question: str) -> str:
         RuntimeError: If the request fails
     """
     try:
-        result = await llm_client.chat(message=question, provider=ModelProvider.LLAMA)
+        client = get_llm_client()
+        result = await client.chat(message=question, provider=ModelProvider.LLAMA)
         return result["response"]
     except LLMClientError as e:
         raise RuntimeError(str(e))
