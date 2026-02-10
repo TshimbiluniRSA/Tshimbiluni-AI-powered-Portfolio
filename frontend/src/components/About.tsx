@@ -1,8 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import './About.css';
 
+interface CVExperience {
+  title: string;
+  company: string;
+  duration: string;
+}
+
+interface CVData {
+  summary?: string;
+  experience?: CVExperience[];
+}
+
 const About: React.FC = () => {
-  const [cvData, setCvData] = useState<any>(null);
+  const [cvData, setCvData] = useState<CVData | null>(null);
   
   useEffect(() => {
     fetch('/api/cv/info')

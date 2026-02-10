@@ -1,8 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import './Projects.css';
 
+interface Project {
+  id: number;
+  name: string;
+  description?: string;
+  language?: string;
+  topics?: string[];
+  stars?: number;
+  forks?: number;
+  html_url: string;
+}
+
 const Projects: React.FC = () => {
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -3,9 +3,13 @@ import { api } from '../api/client';
 import type { GitHubProfile } from '../api/client';
 import './Hero.css';
 
+interface CVData {
+  summary?: string;
+}
+
 const Hero: React.FC = () => {
   const [githubProfile, setGithubProfile] = useState<GitHubProfile | null>(null);
-  const [cvData, setCvData] = useState<any>(null);
+  const [cvData, setCvData] = useState<CVData | null>(null);
   const githubUsername = import.meta.env.VITE_GITHUB_USERNAME || 'TshimbiluniRSA';
 
   useEffect(() => {
