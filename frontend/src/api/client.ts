@@ -171,9 +171,8 @@ export const api = {
       return response.data;
     },
     
-    getProfile: async (profileUrl: string): Promise<LinkedInProfile> => {
-      const encodedUrl = encodeURIComponent(profileUrl);
-      const response = await apiClient.get(`/linkedin/profiles/${encodedUrl}`);
+    getProfile: async (username: string): Promise<LinkedInProfile> => {
+      const response = await apiClient.get(`/linkedin/profiles/${encodeURIComponent(username)}`);
       return response.data;
     },
   },

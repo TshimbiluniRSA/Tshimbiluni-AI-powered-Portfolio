@@ -537,9 +537,10 @@ async def sync_github_repositories(
         force_refresh: Force refresh even if cached data exists
         
     Returns:
-    safe_username = _sanitize_for_log(username)
         List of cached repository records
     """
+    safe_username = _sanitize_for_log(username)
+
     # Check if we have cached data
     if not force_refresh:
         stmt = select(GitHubRepository).where(

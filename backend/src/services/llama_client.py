@@ -45,13 +45,19 @@ class LLMClient:
     """Unified client for various LLM providers."""
     
     def __init__(self):
-        self.providers = {
-            ModelProvider.LLAMA: LlamaProvider(),
-            ModelProvider.OPENAI: OpenAIProvider(),
-            ModelProvider.ANTHROPIC: AnthropicProvider(),
-            ModelProvider.OLLAMA: OllamaProvider(),
-            ModelProvider.GEMINI: GeminiProvider(),
-        }
+        self.providers = {}
+
+        # Always available providers (may still fail at request time if not configured)
+        self.providers[ModelProvider.LLAMA] = LlamaProvider()
+        self.providers[ModelProvider.OPENAI] = OpenAIProvider()
+        self.providers[ModelProvider.ANTHROPIC] = AnthropicProvider()
+        self.providers[ModelProvider.OLLAMA] = OllamaProvider()
+
+        # Conditionally initialize providers that require startup validation
+        try:
+            self.providers[ModelProvider.GEMINI] = GeminiProvider()
+        except Exception as exc:
+            logger.warning(f"Gemini provider unavailable at startup: {exc}")
         
         # Read from environment variable, default to Gemini
         default_provider_env = os.getenv("DEFAULT_LLM_PROVIDER")
@@ -133,7 +139,14 @@ class LLMClient:
             # Prepare the provider
             llm_provider = self.providers.get(provider)
             if not llm_provider:
-                raise LLMClientError(f"Unsupported provider: {provider}")
+                fallback_provider = self._get_fallback_provider()
+                if not fallback_provider:
+                    raise LLMClientError(f"Unsupported provider: {provider}")
+                logger.warning(
+                    f"Provider {provider} unavailable, falling back to {fallback_provider}"
+                )
+                provider = fallback_provider
+                llm_provider = self.providers[fallback_provider]
             
             # Make the request
             response_data = await llm_provider.generate_response(
@@ -147,6 +160,13 @@ class LLMClient:
             
             # Calculate metrics
             response_time_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
+
+            response_content = (response_data.get("content") or "").strip()
+            if not response_content:
+                raise LLMClientError(
+                    f"{provider.value} returned an empty response. "
+                    "Please verify provider configuration and safety settings."
+                )
             
             # Save to database if session provided
             if session_id and db_session:
@@ -154,7 +174,7 @@ class LLMClient:
                     db_session=db_session,
                     session_id=session_id,
                     user_message=message,
-                    assistant_message=response_data["content"],
+                    assistant_message=response_content,
                     response_time_ms=response_time_ms,
                     model_used=response_data.get("model"),
                     tokens_used=response_data.get("tokens_used"),
@@ -197,6 +217,20 @@ class LLMClient:
             
             logger.error(f"LLM chat failed with {provider}: {str(e)}")
             raise LLMClientError(f"Failed to get LLM response: {str(e)}")
+
+    def _get_fallback_provider(self) -> Optional[ModelProvider]:
+        """Return the first available provider when the requested one is unavailable."""
+        provider_priority = [
+            ModelProvider.GEMINI,
+            ModelProvider.OLLAMA,
+            ModelProvider.OPENAI,
+            ModelProvider.LLAMA,
+            ModelProvider.ANTHROPIC,
+        ]
+        for provider in provider_priority:
+            if provider in self.providers:
+                return provider
+        return None
     
     async def stream_chat(
         self,
@@ -287,7 +321,7 @@ class LLMClient:
                 session_id=session_id,
                 message_type=MessageType.USER,
                 content=user_message,
-                metadata=metadata or {}
+                msg_metadata=metadata or {}
             )
             db_session.add(user_msg)
             
@@ -299,7 +333,7 @@ class LLMClient:
                 response_time_ms=response_time_ms,
                 tokens_used=tokens_used,
                 model_used=model_used,
-                metadata=metadata or {}
+                msg_metadata=metadata or {}
             )
             db_session.add(assistant_msg)
             
