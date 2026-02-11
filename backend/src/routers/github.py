@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy import select, desc, func, text
-from db.database import get_async_db, get_db
+from db.database import get_async_db, get_db as get_sync_db
 from db.models import GitHubProfile
 from schemas import (
     GitHubProfileResponse,
@@ -34,7 +34,7 @@ router = APIRouter(
 
 # Dependency for backward compatibility
 def get_db():
-    db = get_db()
+    db = get_sync_db()
     try:
         yield db
     finally:

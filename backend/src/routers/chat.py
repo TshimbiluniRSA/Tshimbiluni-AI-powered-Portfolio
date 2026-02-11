@@ -2,7 +2,8 @@ import logging
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Body
+from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
@@ -21,6 +22,12 @@ from services.llama_client import get_llm_client, LLMClientError, ModelProvider
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+class MessageRatingRequest(BaseModel):
+    message_id: int
+    rating: int = Field(..., ge=1, le=5, description="Rating from 1 to 5")
+
 
 # Router configuration
 router = APIRouter(
@@ -57,14 +64,19 @@ async def send_message(
         logger.info(f"Processing chat message for session: {session_id[:8]}...")
         
         # Determine provider and model
-        provider = ModelProvider.LLAMA  # Default provider
+        provider = None
         if request.model:
-            if "gpt" in request.model.lower():
+            normalized_model = request.model.lower()
+            if "gpt" in normalized_model:
                 provider = ModelProvider.OPENAI
-            elif "claude" in request.model.lower():
+            elif "claude" in normalized_model:
                 provider = ModelProvider.ANTHROPIC
-            elif "ollama" in request.model.lower() or "llama" in request.model.lower():
+            elif "ollama" in normalized_model:
                 provider = ModelProvider.OLLAMA
+            elif "llama" in normalized_model:
+                provider = ModelProvider.LLAMA
+            elif "gemini" in normalized_model:
+                provider = ModelProvider.GEMINI
         
         # Send message to LLM
         llm_client = get_llm_client()
@@ -120,12 +132,17 @@ async def stream_message(
         logger.info(f"Starting streaming chat for session: {session_id[:8]}...")
         
         # Determine provider
-        provider = ModelProvider.LLAMA
+        provider = None
         if request.model:
-            if "gpt" in request.model.lower():
+            normalized_model = request.model.lower()
+            if "gpt" in normalized_model:
                 provider = ModelProvider.OPENAI
-            elif "ollama" in request.model.lower():
+            elif "ollama" in normalized_model:
                 provider = ModelProvider.OLLAMA
+            elif "llama" in normalized_model:
+                provider = ModelProvider.LLAMA
+            elif "gemini" in normalized_model:
+                provider = ModelProvider.GEMINI
         
         async def generate_stream():
             """Generate streaming response."""
@@ -284,8 +301,7 @@ async def list_chat_sessions(
 )
 async def rate_message(
     session_id: str,
-    message_id: int,
-    rating: int = Body(..., ge=1, le=5, description="Rating from 1 to 5"),
+    payload: MessageRatingRequest,
     session: AsyncSession = Depends(get_async_db)
 ):
     """Rate an assistant message."""
@@ -293,7 +309,7 @@ async def rate_message(
         # Find the message
         stmt = select(ChatHistory).where(
             ChatHistory.session_id == session_id,
-            ChatHistory.id == message_id,
+            ChatHistory.id == payload.message_id,
             ChatHistory.message_type == "assistant"
         )
         
@@ -304,12 +320,16 @@ async def rate_message(
             raise HTTPException(status_code=404, detail="Message not found")
         
         # Update rating
-        message.rating = rating
+        message.rating = payload.rating
         await session.commit()
         
-        logger.info(f"Message {message_id} rated {rating} stars")
+        logger.info(
+            "Message %s rated %s stars",
+            str(payload.message_id).replace("\r\n", "").replace("\n", ""),
+            str(payload.rating).replace("\r\n", "").replace("\n", "")
+        )
         
-        return {"message": "Rating saved successfully", "rating": rating}
+        return {"message": "Rating saved successfully", "rating": payload.rating}
         
     except HTTPException:
         raise
@@ -405,7 +425,7 @@ async def simple_chat(
         llm_client = get_llm_client()
         response_data = await llm_client.chat(
             message=question,
-            provider=ModelProvider.LLAMA,
+            provider=None,
             db_session=session
         )
         
