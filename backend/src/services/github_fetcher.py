@@ -557,6 +557,12 @@ async def sync_github_repositories(
                 logger.info(f"Using cached repositories for {safe_username}")
                 return cached_repos
     
+    # Ensure owner profile exists (needed for FK constraints).
+    profile = await get_github_profile(session, username)
+    if not profile:
+        profile_data = await fetch_github_data(username=username, force_refresh=True, session=session)
+        await save_github_profile(session=session, profile_data=profile_data)
+
     # Fetch fresh data from GitHub API
     logger.info(f"Fetching repositories for {safe_username} from GitHub API")
     

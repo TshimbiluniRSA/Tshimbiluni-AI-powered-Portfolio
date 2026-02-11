@@ -453,6 +453,10 @@ import secrets
     summary="LinkedIn OAuth Login",
     description="Initiate LinkedIn OAuth flow"
 )
+@router.get(
+    "/api/linkedin/oauth/login",
+    include_in_schema=False
+)
 async def linkedin_oauth_login():
     """Redirect to LinkedIn OAuth authorization page."""
     try:
@@ -476,6 +480,10 @@ async def linkedin_oauth_login():
     "/oauth/callback",
     summary="LinkedIn OAuth Callback",
     description="Handle OAuth callback from LinkedIn"
+)
+@router.get(
+    "/api/linkedin/oauth/callback",
+    include_in_schema=False
 )
 async def linkedin_oauth_callback(
     code: str = Query(..., description="Authorization code from LinkedIn"),
