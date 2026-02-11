@@ -91,7 +91,7 @@ CV TEXT:
         response = await llm_client.chat(
             message=prompt,
             provider=ModelProvider.GEMINI,  # Force Gemini for CV parsing
-            model="gemini-pro",
+            model="gemini-2.0-flash",
             db_session=session,
             max_tokens=4096,
             temperature=0.3  # Lower temperature for more accurate extraction
@@ -107,7 +107,7 @@ CV TEXT:
             "education": parsed_data.get("education", []),
             "certifications": parsed_data.get("certifications", []),
             "languages_spoken": parsed_data.get("languages", []),
-            "ai_model_used": response.get("model", "gemini-pro"),
+            "ai_model_used": response.get("model", "gemini-2.0-flash"),
         }
         
     except json.JSONDecodeError as e:

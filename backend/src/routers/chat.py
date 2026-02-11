@@ -24,6 +24,22 @@ from services.llama_client import get_llm_client, LLMClientError, ModelProvider
 logger = logging.getLogger(__name__)
 
 
+def _normalize_requested_model(model: Optional[str]) -> Optional[str]:
+    """Normalize user-provided model names from API clients/docs."""
+    if model is None:
+        return None
+
+    normalized = model.strip()
+    if not normalized:
+        return None
+
+    # Swagger example payload often sends literal "string".
+    if normalized.lower() in {"string", "default", "auto"}:
+        return None
+
+    return normalized
+
+
 class MessageRatingRequest(BaseModel):
     message_id: int
     rating: int = Field(..., ge=1, le=5, description="Rating from 1 to 5")
@@ -64,9 +80,10 @@ async def send_message(
         logger.info(f"Processing chat message for session: {session_id[:8]}...")
         
         # Determine provider and model
+        selected_model = _normalize_requested_model(request.model)
         provider = None
-        if request.model:
-            normalized_model = request.model.lower()
+        if selected_model:
+            normalized_model = selected_model.lower()
             if "gpt" in normalized_model:
                 provider = ModelProvider.OPENAI
             elif "claude" in normalized_model:
@@ -83,7 +100,7 @@ async def send_message(
         response_data = await llm_client.chat(
             message=request.message,
             session_id=session_id,
-            model=request.model,
+            model=selected_model,
             provider=provider,
             db_session=session,
             **request.metadata or {}
@@ -132,9 +149,10 @@ async def stream_message(
         logger.info(f"Starting streaming chat for session: {session_id[:8]}...")
         
         # Determine provider
+        selected_model = _normalize_requested_model(request.model)
         provider = None
-        if request.model:
-            normalized_model = request.model.lower()
+        if selected_model:
+            normalized_model = selected_model.lower()
             if "gpt" in normalized_model:
                 provider = ModelProvider.OPENAI
             elif "ollama" in normalized_model:
@@ -152,7 +170,7 @@ async def stream_message(
                 async for chunk in llm_client.stream_chat(
                     message=request.message,
                     session_id=session_id,
-                    model=request.model,
+                    model=selected_model,
                     provider=provider,
                     **request.metadata or {}
                 ):

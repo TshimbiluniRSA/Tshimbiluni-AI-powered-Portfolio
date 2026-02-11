@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
@@ -36,12 +38,38 @@ async def get_featured_repositories(
     session: AsyncSession = Depends(get_async_db)
 ):
     """Get featured repositories for portfolio."""
-    stmt = select(GitHubRepository).where(
+    featured_stmt = select(GitHubRepository).where(
         GitHubRepository.is_featured
     ).order_by(GitHubRepository.display_order.asc(), desc(GitHubRepository.stargazers_count))
-    
-    result = await session.execute(stmt)
+
+    result = await session.execute(featured_stmt)
     repos = result.scalars().all()
+
+    # Auto-sync portfolio username if no repositories exist yet.
+    if not repos:
+        portfolio_username = os.getenv("PORTFOLIO_GITHUB_USERNAME", "tshimbilunirsa")
+        try:
+            await sync_github_repositories(portfolio_username, session)
+            result = await session.execute(featured_stmt)
+            repos = result.scalars().all()
+        except Exception as exc:
+            logger.warning("Failed to auto-sync featured repositories: %s", str(exc))
+
+    # Fallback: if nothing is manually featured yet, return top repositories.
+    if not repos:
+        fallback_stmt = (
+            select(GitHubRepository)
+            .where(
+                GitHubRepository.owner_username == os.getenv("PORTFOLIO_GITHUB_USERNAME", "tshimbilunirsa").lower(),
+                GitHubRepository.is_private.is_(False),
+                GitHubRepository.is_archived.is_(False),
+                GitHubRepository.is_fork.is_(False),
+            )
+            .order_by(desc(GitHubRepository.stargazers_count), desc(GitHubRepository.github_pushed_at))
+            .limit(6)
+        )
+        fallback_result = await session.execute(fallback_stmt)
+        repos = fallback_result.scalars().all()
     
     return [
         {
@@ -68,6 +96,18 @@ async def get_user_repositories(
 ):
     """Get all repositories for a user."""
     offset = (page - 1) * size
+
+    # Ensure we have data on first request.
+    if page == 1:
+        existing_stmt = select(func.count(GitHubRepository.id)).where(
+            GitHubRepository.owner_username == username.lower()
+        )
+        existing_result = await session.execute(existing_stmt)
+        if (existing_result.scalar() or 0) == 0:
+            try:
+                await sync_github_repositories(username, session)
+            except Exception as exc:
+                logger.warning("Unable to auto-sync repositories for %s: %s", username, str(exc))
     
     stmt = select(GitHubRepository).where(
         GitHubRepository.owner_username == username.lower()
