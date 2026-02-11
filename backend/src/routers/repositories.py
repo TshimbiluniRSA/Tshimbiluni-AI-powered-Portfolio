@@ -11,6 +11,16 @@ from services.github_fetcher import sync_github_repositories
 
 logger = logging.getLogger(__name__)
 
+
+def sanitize_for_log(value: str) -> str:
+    """
+    Remove newline characters from values before logging to prevent log injection.
+    """
+    if value is None:
+        return ""
+    return value.replace("\r", "").replace("\n", "")
+
+
 router = APIRouter(prefix="/api/repositories", tags=["Repositories"])
 
 
@@ -107,7 +117,11 @@ async def get_user_repositories(
             try:
                 await sync_github_repositories(username, session)
             except Exception as exc:
-                logger.warning("Unable to auto-sync repositories for %s: %s", username, str(exc))
+                logger.warning(
+                    "Unable to auto-sync repositories for %s: %s",
+                    sanitize_for_log(username),
+                    str(exc),
+                )
     
     stmt = select(GitHubRepository).where(
         GitHubRepository.owner_username == username.lower()
