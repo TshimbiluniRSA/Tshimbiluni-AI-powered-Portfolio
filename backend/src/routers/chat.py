@@ -323,7 +323,7 @@ async def rate_message(
         message.rating = payload.rating
         await session.commit()
         
-        logger.info(f"Message {payload.message_id} rated {payload.rating} stars")
+        logger.info("Message %s rated %s stars", payload.message_id, payload.rating)
         
         return {"message": "Rating saved successfully", "rating": payload.rating}
         
