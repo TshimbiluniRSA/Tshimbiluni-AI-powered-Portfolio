@@ -69,8 +69,17 @@ jobs:
 
     - name: Test Docker image
       run: |
-        docker run -d --name test-frontend -p 80:80 portfolio-frontend:${{ github.sha }}
-        sleep 5
-        curl -f http://localhost/health || exit 1
-        docker stop test-frontend
-        docker rm test-frontend
+        set -euo pipefail
+
+        # Avoid host port collisions on CI runners and wait for Nginx startup.
+        docker run -d --name test-frontend -p 8080:80 portfolio-frontend:${{ github.sha }}
+
+        cleanup() {
+          docker logs test-frontend || true
+          docker stop test-frontend || true
+          docker rm test-frontend || true
+        }
+        trap cleanup EXIT
+
+        # Retry health endpoint for up to 60 seconds.
+        timeout 60 bash -c 'until curl -fsS http://localhost:8080/health; do sleep 2; done'
