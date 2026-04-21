@@ -12,23 +12,23 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file
-COPY src/requirements.txt .
+# Copy requirements file since Docker context is now backend/src
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY src/ ./src/
+COPY . .
 
 # Create data directory
 RUN mkdir -p /app/data
 
 # Set Python path so imports work correctly
-ENV PYTHONPATH=/app/src
+ENV PYTHONPATH=/app
 
 # Expose port
 EXPOSE 8000
 
 # Run the application
-CMD uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000}
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

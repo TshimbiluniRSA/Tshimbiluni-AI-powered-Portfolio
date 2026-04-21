@@ -4,7 +4,7 @@ services:
   # Backend API service (development mode with hot reload)
   backend:
     build:
-      context: ./backend
+      context: ./backend/src
       dockerfile: Dockerfile
     container_name: portfolio-backend-dev
     ports:
@@ -19,11 +19,11 @@ services:
       - TEMPERATURE=0.7
       - LOG_LEVEL=DEBUG
     env_file:
-      - ./backend/.env
+      - ./backend/src/.env
     volumes:
-      - ./backend/data:/app/data
-      - ./backend/src:/app/src
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+      - ./backend/src/data:/app/data
+      - ./backend/src:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     restart: unless-stopped
     networks:
       - portfolio-network

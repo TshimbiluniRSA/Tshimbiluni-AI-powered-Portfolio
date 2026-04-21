@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
 from db.models import CV
-from services.llama_client import get_llm_client, ModelProvider
+from services.llm_client import get_llm_client, ModelProvider
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ CV TEXT:
         response = await llm_client.chat(
             message=prompt,
             provider=ModelProvider.GEMINI,  # Force Gemini for CV parsing
-            model="gemini-2.0-flash",
+            model="gemini-2.5-pro",
             db_session=session,
             max_tokens=4096,
             temperature=0.3  # Lower temperature for more accurate extraction
@@ -107,7 +107,7 @@ CV TEXT:
             "education": parsed_data.get("education", []),
             "certifications": parsed_data.get("certifications", []),
             "languages_spoken": parsed_data.get("languages", []),
-            "ai_model_used": response.get("model", "gemini-2.0-flash"),
+            "ai_model_used": response.get("model", "gemini-2.5-pro"),
         }
         
     except json.JSONDecodeError as e:

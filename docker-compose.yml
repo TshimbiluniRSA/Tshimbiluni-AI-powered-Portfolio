@@ -4,7 +4,7 @@ services:
   # Backend API service
   backend:
     build:
-      context: ./backend
+      context: ./backend/src
       dockerfile: Dockerfile
     container_name: portfolio-backend
     ports:
@@ -17,10 +17,10 @@ services:
       - MAX_TOKENS=2048
       - TEMPERATURE=0.7
     env_file:
-      - ./backend/.env
+      - ./backend/src/.env
     volumes:
-      - ./backend/data:/app/data
-      - ./backend/src:/app/src
+      - ./backend/src/data:/app/data
+      - ./backend/src:/app
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]

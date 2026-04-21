@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/cv", tags=["CV"])
 
 # CV storage directory
-CV_STORAGE_DIR = Path("backend/data/cvs")
+CV_STORAGE_DIR = Path("data/cvs")
 CV_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 
