@@ -78,7 +78,7 @@ jobs:
 
     - name: Build Docker image
       run: |
-        cd backend
+        cd backend/src
         docker build -t portfolio-backend:${{ github.sha }} .
 
     - name: Test Docker image

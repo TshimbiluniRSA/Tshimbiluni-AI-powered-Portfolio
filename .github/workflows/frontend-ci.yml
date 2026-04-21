@@ -69,8 +69,8 @@ jobs:
 
     - name: Test Docker image
       run: |
-        docker run -d --name test-frontend -p 80:80 portfolio-frontend:${{ github.sha }}
-        sleep 5
-        curl -f http://localhost/health || exit 1
+        docker run -d --name test-frontend -p 8080:80 portfolio-frontend:${{ github.sha }}
+        sleep 10
+        curl -f http://localhost:8080/health || exit 1
         docker stop test-frontend
         docker rm test-frontend
