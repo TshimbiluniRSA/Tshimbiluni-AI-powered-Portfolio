@@ -115,7 +115,14 @@ class GeminiProvider:
                 
                 last_error = f"API error ({e.response.status_code}): {error_details}"
                 logger.warning(f"Request failed with model {current_model}: {last_error}")
-                continue 
+                
+                # Only use backup model if we get a 503 (Service Unavailable) 
+                if e.response.status_code == 503:
+                    continue 
+                else:
+                    # Break out and fail immediately for issues like 429 (out of credits) / 401 (auth)
+                    raise LLMClientError(f"Gemini API request failed. Last error: {last_error}")
+                    
             except httpx.RequestError as e:
                 last_error = f"Request failed: {str(e)}"
                 logger.warning(f"Request failed with model {current_model}: {last_error}")
@@ -192,7 +199,14 @@ class GeminiProvider:
                     error_details = e.response.text
                 last_error = f"API error ({e.response.status_code}): {error_details}"
                 logger.warning(f"Streaming failed with model {current_model}: {last_error}")
-                continue 
+                
+                # Only use backup model if we get a 503 (Service Unavailable)
+                if e.response.status_code == 503:
+                    continue
+                else:
+                    # Break out and fail immediately for issues like 429 
+                    raise LLMClientError(f"Gemini streaming failed. Last error: {last_error}")
+                    
             except Exception as e:
                 last_error = f"Streaming failed: {str(e)}"
                 logger.warning(f"Streaming failed with model {current_model}: {last_error}")
