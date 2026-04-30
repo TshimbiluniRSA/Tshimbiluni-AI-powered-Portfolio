@@ -27,6 +27,8 @@ class LLMClientError(Exception):
 
 class GeminiProvider:
     """Provider for Google Gemini models."""
+
+    CONTEXT_WINDOW_SIZE = 10
     
     def __init__(self):
         """Initialize the Gemini provider."""
@@ -55,7 +57,7 @@ class GeminiProvider:
         
         contents = []
         if context:
-            for msg in context[-10:]:
+            for msg in context[-self.CONTEXT_WINDOW_SIZE:]:
                 role = "user" if msg.get("role") in ["user", "human"] else "model"
                 contents.append({"role": role, "parts": [{"text": msg.get("content", "")}]})
         
@@ -148,7 +150,7 @@ class GeminiProvider:
         
         contents = []
         if context:
-            for msg in context[-10:]:
+            for msg in context[-self.CONTEXT_WINDOW_SIZE:]:
                 role = "user" if msg.get("role") in ["user", "human"] else "model"
                 contents.append({"role": role, "parts": [{"text": msg.get("content", "")}]})
                 
@@ -219,6 +221,8 @@ class GeminiProvider:
 class OpenAIProvider:
     """Provider for OpenAI models."""
 
+    CONTEXT_WINDOW_SIZE = 10
+
     def __init__(self):
         """Initialize the OpenAI provider."""
         self.api_key = os.getenv("OPENAI_API_KEY")
@@ -248,7 +252,7 @@ class OpenAIProvider:
 
         messages = []
         if context:
-            for msg in context[-10:]:
+            for msg in context[-self.CONTEXT_WINDOW_SIZE:]:
                 role = "user" if msg.get("role") in ["user", "human"] else "assistant"
                 messages.append({"role": role, "content": msg.get("content", "")})
         messages.append({"role": "user", "content": message})
@@ -308,7 +312,7 @@ class OpenAIProvider:
         if not self.api_key:
             raise LLMClientError("OPENAI_API_KEY not configured")
 
-        from openai import AsyncOpenAI
+        from openai import AsyncOpenAI, APIStatusError, APIConnectionError
 
         model_name = model or self.model
         temperature = kwargs.get('temperature', 0.7)
@@ -316,7 +320,7 @@ class OpenAIProvider:
 
         messages = []
         if context:
-            for msg in context[-10:]:
+            for msg in context[-self.CONTEXT_WINDOW_SIZE:]:
                 role = "user" if msg.get("role") in ["user", "human"] else "assistant"
                 messages.append({"role": role, "content": msg.get("content", "")})
         messages.append({"role": "user", "content": message})
@@ -334,7 +338,16 @@ class OpenAIProvider:
             async for chunk in stream:
                 if chunk.choices and chunk.choices[0].delta.content is not None:
                     yield chunk.choices[0].delta.content
+        except APIStatusError as e:
+            last_error = f"API error ({e.status_code}): {e.message}"
+            logger.warning(f"OpenAI streaming failed: {last_error}")
+            raise LLMClientError(f"OpenAI streaming failed: {last_error}")
+        except APIConnectionError as e:
+            last_error = f"Connection failed: {str(e)}"
+            logger.warning(f"OpenAI streaming connection failed: {last_error}")
+            raise LLMClientError(f"OpenAI streaming failed: {last_error}")
         except Exception as e:
+            logger.warning(f"OpenAI streaming failed: {str(e)}")
             raise LLMClientError(f"OpenAI streaming failed: {str(e)}")
 
 

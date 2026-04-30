@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
 from db.models import CV
-from services.llm_client import get_llm_client, LLMClientError
+from services.llm_client import get_llm_client
 
 logger = logging.getLogger(__name__)
 
