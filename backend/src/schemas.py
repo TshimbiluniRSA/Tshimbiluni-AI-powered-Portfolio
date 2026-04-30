@@ -322,6 +322,7 @@ class ChatRequest(BaseModel):
     message: str = Field(...,min_length=1,max_length=10000,description="User message content")
     session_id: Optional[str] = Field(None, description="Optional session ID to continue conversation")
     model: Optional[str] = Field(None,description="Optional model to use for the response")
+    provider: Optional[str] = Field(None,description="LLM provider to use: 'gemini' or 'openai'. Defaults to server-configured provider.")
     metadata: Optional[Dict[str, Any]] = Field(None,description="Optional metadata for the request")
 
 

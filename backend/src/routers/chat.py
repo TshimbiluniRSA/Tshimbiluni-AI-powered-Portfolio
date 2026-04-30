@@ -79,10 +79,17 @@ async def send_message(
         
         logger.info(f"Processing chat message for session: {session_id[:8]}...")
         
-        # Determine provider and model
+        # Determine model and provider
         selected_model = _normalize_requested_model(request.model)
-        # Force Gemini provider as requested
-        provider = ModelProvider.GEMINI
+        selected_provider = None
+        if request.provider:
+            try:
+                selected_provider = ModelProvider(request.provider.lower())
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown provider '{request.provider}'. Valid options: gemini, openai"
+                )
         
         # Send message to LLM
         llm_client = get_llm_client()
@@ -90,7 +97,7 @@ async def send_message(
             message=request.message,
             session_id=session_id,
             model=selected_model,
-            provider=provider,
+            provider=selected_provider,
             db_session=session,
             **request.metadata or {}
         )
@@ -112,6 +119,8 @@ async def send_message(
     except LLMClientError as e:
         logger.error(f"LLM client error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"AI service error: {str(e)}")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Unexpected error in chat: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -137,9 +146,16 @@ async def stream_message(
         
         logger.info(f"Starting streaming chat for session: {session_id[:8]}...")
         
-        # Force Gemini provider for streaming as requested
         selected_model = _normalize_requested_model(request.model)
-        provider = ModelProvider.GEMINI
+        selected_provider = None
+        if request.provider:
+            try:
+                selected_provider = ModelProvider(request.provider.lower())
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown provider '{request.provider}'. Valid options: gemini, openai"
+                )
         
         async def generate_stream():
             """Generate streaming response."""
@@ -150,7 +166,7 @@ async def stream_message(
                     message=request.message,
                     session_id=session_id,
                     model=selected_model,
-                    provider=provider,
+                    provider=selected_provider,
                     **request.metadata or {}
                 ):
                     full_response += chunk
@@ -173,6 +189,8 @@ async def stream_message(
             }
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Stream setup error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -390,7 +408,8 @@ async def health_check(
     # Check LLM providers (simplified)
     llm_client = get_llm_client()
     external_apis = {
-        "gemini": bool(llm_client.provider_client.api_key)
+        "gemini": bool(llm_client.gemini_provider.api_key),
+        "openai": bool(llm_client.openai_provider.api_key),
     }
     
     return HealthCheckResponse(

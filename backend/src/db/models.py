@@ -144,7 +144,6 @@ class LinkedInProfile(Base, TimestampMixin):
 
     @hybrid_property
     def is_data_stale(self) -> bool:
-        print('DEBUG last_scraped_at:', self.last_scraped_at, type(self.last_scraped_at), getattr(self.last_scraped_at, "tzinfo", None))
         if not self.last_scraped_at:
             return True
         last_scraped = self.last_scraped_at
@@ -152,7 +151,7 @@ class LinkedInProfile(Base, TimestampMixin):
             last_scraped = datetime.fromisoformat(last_scraped)
         if last_scraped.tzinfo is None or last_scraped.tzinfo.utcoffset(last_scraped) is None:
             last_scraped = last_scraped.replace(tzinfo=timezone.utc)
-        return (datetime.now(timezone.utc) - last_scraped).days >= 1
+        return (datetime.now(timezone.utc) - last_scraped).days >= 7
 
 
 class CV(Base, TimestampMixin):

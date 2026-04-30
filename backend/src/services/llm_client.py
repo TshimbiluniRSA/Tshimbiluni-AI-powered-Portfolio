@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 class ModelProvider(str, Enum):
     """Supported model providers."""
     GEMINI = "gemini"
+    OPENAI = "openai"
 
 
 class LLMClientError(Exception):
@@ -215,47 +216,187 @@ class GeminiProvider:
         raise LLMClientError(f"Gemini streaming failed. Last error: {last_error}")
 
 
-class LLMClient:
-    """Unified client for LLM interaction (now specific to Gemini)."""
-    
+class OpenAIProvider:
+    """Provider for OpenAI models."""
+
     def __init__(self):
-        self.provider_client = GeminiProvider()
+        """Initialize the OpenAI provider."""
+        self.api_key = os.getenv("OPENAI_API_KEY")
+        if not self.api_key:
+            logger.warning("OPENAI_API_KEY not configured at startup")
+
+        self.base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        self.model = "gpt-4o"
+        self.backup_model = "gpt-4o-mini"
+
+    async def generate_response(
+        self,
+        message: str,
+        model: Optional[str] = None,
+        context: Optional[List[Dict[str, str]]] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Generate response from OpenAI model."""
+        if not self.api_key:
+            raise LLMClientError("OPENAI_API_KEY not configured")
+
+        from openai import AsyncOpenAI, APIStatusError, APIConnectionError
+
+        model_name = model or self.model
+        temperature = kwargs.get('temperature', 0.7)
+        max_tokens = kwargs.get('max_tokens', 2048)
+
+        messages = []
+        if context:
+            for msg in context[-10:]:
+                role = "user" if msg.get("role") in ["user", "human"] else "assistant"
+                messages.append({"role": role, "content": msg.get("content", "")})
+        messages.append({"role": "user", "content": message})
+
+        client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+
+        models_to_try = [model_name]
+        if model_name == self.model:
+            models_to_try.append(self.backup_model)
+
+        last_error = None
+        for current_model in models_to_try:
+            try:
+                response = await client.chat.completions.create(
+                    model=current_model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+
+                generated_text = response.choices[0].message.content or ""
+                usage = response.usage
+                tokens_used = usage.total_tokens if usage else 0
+
+                return {
+                    "content": generated_text.strip(),
+                    "model": current_model,
+                    "tokens_used": tokens_used,
+                    "metadata": {
+                        "provider": "openai",
+                        "prompt_tokens": usage.prompt_tokens if usage else 0,
+                        "completion_tokens": usage.completion_tokens if usage else 0,
+                    }
+                }
+            except APIStatusError as e:
+                last_error = f"API error ({e.status_code}): {e.message}"
+                logger.warning(f"OpenAI request failed with model {current_model}: {last_error}")
+                if e.status_code >= 500:
+                    continue
+                else:
+                    raise LLMClientError(f"OpenAI API request failed: {last_error}")
+            except APIConnectionError as e:
+                last_error = f"Connection failed: {str(e)}"
+                logger.warning(f"OpenAI connection failed with model {current_model}: {last_error}")
+                continue
+
+        raise LLMClientError(f"OpenAI API request failed. Last error: {last_error}")
+
+    async def stream_response(
+        self,
+        message: str,
+        model: Optional[str] = None,
+        context: Optional[List[Dict[str, str]]] = None,
+        **kwargs
+    ) -> AsyncGenerator[str, None]:
+        """Stream response from OpenAI model."""
+        if not self.api_key:
+            raise LLMClientError("OPENAI_API_KEY not configured")
+
+        from openai import AsyncOpenAI
+
+        model_name = model or self.model
+        temperature = kwargs.get('temperature', 0.7)
+        max_tokens = kwargs.get('max_tokens', 2048)
+
+        messages = []
+        if context:
+            for msg in context[-10:]:
+                role = "user" if msg.get("role") in ["user", "human"] else "assistant"
+                messages.append({"role": role, "content": msg.get("content", "")})
+        messages.append({"role": "user", "content": message})
+
+        client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+
+        try:
+            stream = await client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+            )
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content is not None:
+                    yield chunk.choices[0].delta.content
+        except Exception as e:
+            raise LLMClientError(f"OpenAI streaming failed: {str(e)}")
+
+
+class LLMClient:
+    """Unified client for LLM interaction supporting Gemini and OpenAI."""
+
+    def __init__(self):
+        self.gemini_provider = GeminiProvider()
+        self.openai_provider = OpenAIProvider()
         self.max_tokens = int(os.getenv("MAX_TOKENS", "2048"))
         self.temperature = float(os.getenv("TEMPERATURE", "0.7"))
-        logger.info("LLM Client initialized with Gemini")
-    
+
+        # Determine default provider from environment
+        default_provider_env = os.getenv("DEFAULT_LLM_PROVIDER", "gemini").lower()
+        try:
+            self.default_provider = ModelProvider(default_provider_env)
+        except ValueError:
+            logger.warning(f"Unknown DEFAULT_LLM_PROVIDER '{default_provider_env}', falling back to gemini")
+            self.default_provider = ModelProvider.GEMINI
+
+        logger.info(f"LLM Client initialized. Default provider: {self.default_provider}")
+
+    def _get_provider_client(self, provider: Optional[ModelProvider] = None):
+        """Return (provider_client, provider_name) for the requested or default provider."""
+        resolved = provider or self.default_provider
+        if resolved == ModelProvider.OPENAI:
+            return self.openai_provider, "openai"
+        return self.gemini_provider, "gemini"
+
     async def chat(
         self,
         message: str,
         session_id: Optional[str] = None,
         model: Optional[str] = None,
-        provider: Optional[ModelProvider] = None, # Left for backward compatibility in method signature
+        provider: Optional[ModelProvider] = None,
         context: Optional[List[Dict[str, str]]] = None,
         db_session: Optional[AsyncSession] = None,
         **kwargs
     ) -> Dict[str, Any]:
-        """Send a chat message to Gemini and get a response."""
+        """Send a chat message and get a response."""
         start_time = datetime.now(timezone.utc)
-        
+        provider_client, provider_name = self._get_provider_client(provider)
+
         try:
             conversation_history = []
             if session_id and db_session:
                 conversation_history = await self._get_conversation_history(db_session, session_id)
-            
-            response_data = await self.provider_client.generate_response(
+
+            response_data = await provider_client.generate_response(
                 message=message,
                 model=model,
                 context=context or conversation_history,
                 max_tokens=kwargs.get('max_tokens', self.max_tokens),
                 temperature=kwargs.get('temperature', self.temperature)
             )
-            
+
             response_time_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
             response_content = (response_data.get("content") or "").strip()
-            
+
             if not response_content:
-                raise LLMClientError("Gemini returned an empty response. Please verify safety settings.")
-            
+                raise LLMClientError(f"{provider_name.capitalize()} returned an empty response. Please verify your API key and settings.")
+
             if session_id and db_session:
                 await self._save_chat_messages(
                     db_session=db_session,
@@ -267,47 +408,51 @@ class LLMClient:
                     tokens_used=response_data.get("tokens_used"),
                     metadata=response_data.get("metadata", {})
                 )
-            
+
             if db_session:
                 await self._log_api_usage(
                     db_session=db_session,
+                    provider=provider_name,
                     model=response_data.get("model"),
                     tokens_used=response_data.get("tokens_used"),
                     response_time_ms=response_time_ms,
                     success=True
                 )
-            
+
             return {
                 "response": response_content,
                 "session_id": session_id,
                 "model": response_data.get("model"),
+                "provider": provider_name,
                 "tokens_used": response_data.get("tokens_used"),
                 "response_time_ms": response_time_ms,
                 "metadata": response_data.get("metadata", {})
             }
-            
+
         except Exception as e:
             if db_session:
                 await self._log_api_usage(
                     db_session=db_session,
+                    provider=provider_name,
                     error_message=str(e),
                     response_time_ms=int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000),
                     success=False
                 )
             logger.error(f"LLM chat failed: {str(e)}")
             raise LLMClientError(f"Failed to get LLM response: {str(e)}")
-            
+
     async def stream_chat(
         self,
         message: str,
         session_id: Optional[str] = None,
         model: Optional[str] = None,
-        provider: Optional[ModelProvider] = None, # Left for backward compatibility 
+        provider: Optional[ModelProvider] = None,
         context: Optional[List[Dict[str, str]]] = None,
         **kwargs
     ) -> AsyncGenerator[str, None]:
-        """Stream chat response from Gemini."""
-        async for chunk in self.provider_client.stream_response(
+        """Stream chat response from the selected provider."""
+        provider_client, _ = self._get_provider_client(provider)
+        async for chunk in provider_client.stream_response(
             message=message,
             model=model,
             context=context,
@@ -321,7 +466,7 @@ class LLMClient:
             stmt = select(ChatHistory).where(ChatHistory.session_id == session_id).order_by(desc(ChatHistory.created_at)).limit(limit * 2)
             result = await session.execute(stmt)
             messages = result.scalars().all()
-            
+
             conversation = []
             for msg in reversed(messages):
                 conversation.append({"role": "user" if msg.message_type == MessageType.USER else "model", "content": msg.content})
@@ -329,7 +474,7 @@ class LLMClient:
         except Exception as e:
             logger.warning(f"Failed to get conversation history: {str(e)}")
             return []
-            
+
     async def _save_chat_messages(self, db_session: AsyncSession, session_id: str, user_message: str, assistant_message: str, response_time_ms: int, model_used: Optional[str] = None, tokens_used: Optional[int] = None, metadata: Optional[Dict[str, Any]] = None) -> None:
         try:
             user_msg = ChatHistory(session_id=session_id, message_type=MessageType.USER, content=user_message, msg_metadata=metadata or {})
@@ -341,17 +486,17 @@ class LLMClient:
             await db_session.rollback()
             logger.error(f"Failed to save chat messages: {str(e)}")
 
-    async def _log_api_usage(self, db_session: AsyncSession, model: Optional[str] = None, tokens_used: Optional[int] = None, response_time_ms: int = 0, error_message: Optional[str] = None, success: bool = True) -> None:
+    async def _log_api_usage(self, db_session: AsyncSession, provider: str = "gemini", model: Optional[str] = None, tokens_used: Optional[int] = None, response_time_ms: int = 0, error_message: Optional[str] = None, success: bool = True) -> None:
         try:
             log_entry = APIUsageLog(
-                api_provider="gemini",
+                api_provider=provider,
                 endpoint=model,
                 method="POST",
                 status_code=200 if success else 500,
                 response_time_ms=response_time_ms,
                 tokens_used=tokens_used,
                 error_message=error_message,
-                request_metadata={"model": model, "provider": "gemini"}
+                request_metadata={"model": model, "provider": provider}
             )
             db_session.add(log_entry)
             await db_session.commit()

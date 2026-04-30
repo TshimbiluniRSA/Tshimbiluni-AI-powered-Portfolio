@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
 from db.models import CV
-from services.llm_client import get_llm_client, ModelProvider
+from services.llm_client import get_llm_client, LLMClientError
 
 logger = logging.getLogger(__name__)
 
@@ -90,8 +90,6 @@ CV TEXT:
         # Call AI with higher token limit for CV parsing
         response = await llm_client.chat(
             message=prompt,
-            provider=ModelProvider.GEMINI,  # Force Gemini for CV parsing
-            model="gemini-2.5-pro",
             db_session=session,
             max_tokens=4096,
             temperature=0.3  # Lower temperature for more accurate extraction
