@@ -5,6 +5,7 @@ import Hero from './components/Hero'
 import About from './components/About'
 import Skills from './components/Skills'
 import Projects from './components/Projects'
+import BuildingToward from './components/BuildingToward'
 import Chat from './components/Chat'
 import Footer from './components/Footer'
 
@@ -17,6 +18,7 @@ function App() {
       <main>
         <Hero />
         <About />
+        <BuildingToward />
         <Skills />
         <Projects />
       </main>
@@ -26,7 +28,7 @@ function App() {
       <button 
         className="chat-toggle-btn"
         onClick={() => setIsChatOpen(!isChatOpen)}
-        aria-label="Toggle AI Chat"
+        aria-label={isChatOpen ? "Close AI chat" : "Open AI chat"} title={isChatOpen ? "Close AI chat" : "Open AI chat"}
       >
         💬
       </button>

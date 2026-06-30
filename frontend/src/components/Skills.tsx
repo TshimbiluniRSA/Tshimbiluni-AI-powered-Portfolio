@@ -1,73 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import './Skills.css';
-import { api } from '../api/client';
-
-const Skills: React.FC = () => {
-  const [skills, setSkills] = useState<string[]>([]);
-  
-  useEffect(() => {
-    api.cv.getInfo()
-      .then(data => {
-        if (data.skills) {
-          setSkills(data.skills);
-        }
-      })
-      .catch(console.error);
-  }, []);
-
-  // Categorize skills (simple heuristic)
-  const categorizeSkills = (allSkills: string[]) => {
-    const categories: { [key: string]: string[] } = {
-      'Frontend': ['React', 'TypeScript', 'JavaScript', 'HTML', 'CSS', 'Vite', 'Tailwind', 'Vue', 'Angular'],
-      'Backend': ['Python', 'FastAPI', 'Node.js', 'Django', 'Flask', 'REST', 'GraphQL', 'Express'],
-      'AI & ML': ['OpenAI', 'LLaMA', 'Gemini', 'Machine Learning', 'NLP', 'TensorFlow', 'PyTorch', 'Hugging Face'],
-      'DevOps': ['Docker', 'Kubernetes', 'CI/CD', 'Git', 'Linux', 'AWS', 'PostgreSQL', 'MongoDB', 'Redis'],
-    };
-    
-    const result: { [key: string]: string[] } = {};
-    Object.keys(categories).forEach(cat => {
-      result[cat] = allSkills.filter(skill => 
-        categories[cat].some(tech => 
-          skill.toLowerCase().includes(tech.toLowerCase())
-        )
-      );
-    });
-    
-    // Add uncategorized skills to "Other"
-    const categorized = Object.values(result).flat();
-    result['Other'] = allSkills.filter(s => !categorized.includes(s));
-    
-    return result;
-  };
-
-  const skillCategories: { [key: string]: string[] } = skills.length > 0 ? categorizeSkills(skills) : {
-    'Frontend': ['React', 'TypeScript', 'HTML/CSS', 'Vite', 'Responsive Design'],
-    'Backend': ['Python', 'FastAPI', 'Node.js', 'REST APIs', 'SQLAlchemy'],
-    'AI & ML': ['LLaMA', 'OpenAI', 'Hugging Face', 'NLP', 'Prompt Engineering'],
-    'DevOps & Tools': ['Docker', 'Git', 'CI/CD', 'Linux', 'PostgreSQL']
-  };
-
-  return (
-    <section id="skills" className="skills">
-      <div className="container">
-        <h2 className="section-title">Skills & Technologies</h2>
-        <div className="skills-grid">
-          {Object.entries(skillCategories).map(([category, categorySkills]) => 
-            categorySkills.length > 0 ? (
-              <div key={category} className="skill-category">
-                <h3 className="category-title">{category}</h3>
-                <ul className="skill-list">
-                  {categorySkills.map((skill, idx) => (
-                    <li key={idx} className="skill-item">{skill}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null
-          )}
-        </div>
-      </div>
-    </section>
-  );
-};
-
+import { useInView } from '../hooks/useInView';
+const skillCategories = [
+  { icon:'▣', title:'Frontend Engineering', skills:['React','TypeScript','HTML','CSS','Vite','Responsive UI','Component-based architecture'] },
+  { icon:'⚙', title:'Backend Engineering', skills:['Python','FastAPI','Django / DRF','REST APIs','PostgreSQL','SQLAlchemy','API integrations'] },
+  { icon:'◇', title:'AI and Automation', skills:['LLM integrations','OpenAI','Gemini','Hugging Face','NLP','Prompt engineering','Document AI workflows','Classification and extraction pipelines'] },
+  { icon:'↗', title:'DevOps and Delivery', skills:['Docker','Git','GitHub Actions / CI/CD','Linux','Render','Cloud deployments','Environment configuration'] },
+  { icon:'✓', title:'Engineering Practices', skills:['Debugging production issues','Clean service-layer design','Background jobs','Database design','Testing mindset','API-first development'] },
+];
+const Skills: React.FC = () => { const { ref, isInView } = useInView<HTMLElement>(); return <section id="skills" className="skills" ref={ref}><div className="container"><p className="section-kicker">Capabilities</p><h2 className={`section-title reveal ${isInView ? 'is-visible' : ''}`}>How I Build Software</h2><p className="section-intro">A practical capability map across user interfaces, backend services, data, AI workflows, delivery, and engineering discipline.</p><div className="skills-grid">{skillCategories.map((category,index)=><article key={category.title} className={`skill-category reveal ${isInView ? 'is-visible' : ''}`} style={{ '--reveal-delay': `${index * 0.08}s` } as React.CSSProperties}><div className="category-heading"><span>{category.icon}</span><h3>{category.title}</h3></div><div className="skill-list">{category.skills.map((skill,idx)=><span key={skill} className={idx < 2 ? 'skill-item skill-item-strong':'skill-item'}>{skill}</span>)}</div></article>)}</div></div></section>};
 export default Skills;
