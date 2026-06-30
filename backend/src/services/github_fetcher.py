@@ -231,6 +231,7 @@ class GitHubService:
             session.add(log_entry)
             await session.commit()
         except Exception as e:
+            await session.rollback()
             logger.error(f"Failed to log API usage: {e}")
     
     @retry(
@@ -523,6 +524,88 @@ async def sync_github_profile(
         raise GitHubAPIError(f"Failed to sync GitHub profile: {e}")
 
 
+def normalize_github_repository(repo_data: Dict[str, Any], languages_data: Optional[Dict[str, int]] = None) -> Dict[str, Any]:
+    """Normalize a GitHub API repository payload for portfolio responses/storage."""
+    return {
+        "github_id": repo_data["id"],
+        "name": repo_data["name"],
+        "full_name": repo_data["full_name"],
+        "description": repo_data.get("description"),
+        "html_url": repo_data["html_url"],
+        "language": repo_data.get("language"),
+        "languages_data": languages_data or {},
+        "topics": repo_data.get("topics", []),
+        "stargazers_count": repo_data.get("stargazers_count", 0),
+        "watchers_count": repo_data.get("watchers_count", 0),
+        "forks_count": repo_data.get("forks_count", 0),
+        "open_issues_count": repo_data.get("open_issues_count", 0),
+        "size_kb": repo_data.get("size", 0),
+        "is_fork": repo_data.get("fork", False),
+        "is_archived": repo_data.get("archived", False),
+        "is_private": repo_data.get("private", False),
+        "default_branch": repo_data.get("default_branch", "main"),
+        "github_created_at": datetime.fromisoformat(repo_data["created_at"].replace("Z", "+00:00")),
+        "github_updated_at": datetime.fromisoformat(repo_data["updated_at"].replace("Z", "+00:00")),
+        "github_pushed_at": datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00")) if repo_data.get("pushed_at") else None,
+        "last_synced_at": datetime.now(timezone.utc),
+    }
+
+
+def repository_response(repo: GitHubRepository) -> Dict[str, Any]:
+    """Serialize a cached repository in the shape expected by the frontend."""
+    return {
+        "id": repo.id,
+        "github_id": repo.github_id,
+        "name": repo.name,
+        "full_name": repo.full_name,
+        "description": repo.description,
+        "html_url": repo.html_url,
+        "language": repo.language,
+        "languages": repo.languages_data,
+        "topics": repo.topics or [],
+        "stars": repo.stargazers_count or 0,
+        "forks": repo.forks_count or 0,
+        "is_featured": repo.is_featured,
+    }
+
+
+def repository_api_response(repo_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Serialize a GitHub API repository without requiring a database write."""
+    normalized = normalize_github_repository(repo_data)
+    return {
+        "id": normalized["github_id"],
+        "github_id": normalized["github_id"],
+        "name": normalized["name"],
+        "full_name": normalized["full_name"],
+        "description": normalized["description"],
+        "html_url": normalized["html_url"],
+        "language": normalized["language"],
+        "languages": normalized["languages_data"],
+        "topics": normalized["topics"],
+        "stars": normalized["stargazers_count"],
+        "forks": normalized["forks_count"],
+        "is_featured": False,
+    }
+
+
+async def fetch_github_repository_responses(username: str, limit: int = 6) -> List[Dict[str, Any]]:
+    """Fetch public repositories directly from GitHub for a DB-independent fallback."""
+    repos_data = await github_service.fetch_user_repositories(
+        username=username,
+        per_page=100,
+        session=None,
+    )
+    filtered_repos = [
+        repo for repo in repos_data
+        if not repo.get("private") and not repo.get("archived") and not repo.get("fork")
+    ]
+    filtered_repos.sort(
+        key=lambda repo: (repo.get("stargazers_count", 0), repo.get("pushed_at") or ""),
+        reverse=True,
+    )
+    return [repository_api_response(repo) for repo in filtered_repos[:limit]]
+
+
 async def sync_github_repositories(
     username: str,
     session: AsyncSession,
@@ -552,10 +635,13 @@ async def sync_github_repositories(
         
         if cached_repos:
             # Check if data is stale (older than 24 hours)
-            latest_sync = max([r.last_synced_at for r in cached_repos])
-            if (datetime.now(timezone.utc) - latest_sync).days < 1:
-                logger.info(f"Using cached repositories for {safe_username}")
-                return cached_repos
+            latest_sync = max([r.last_synced_at for r in cached_repos if r.last_synced_at], default=None)
+            if latest_sync:
+                if latest_sync.tzinfo is None or latest_sync.tzinfo.utcoffset(latest_sync) is None:
+                    latest_sync = latest_sync.replace(tzinfo=timezone.utc)
+                if (datetime.now(timezone.utc) - latest_sync).days < 1:
+                    logger.info(f"Using cached repositories for {safe_username}")
+                    return cached_repos
     
     # Ensure owner profile exists (needed for FK constraints).
     profile = await get_github_profile(session, username)
@@ -607,30 +693,8 @@ async def save_github_repository(
     result = await session.execute(stmt)
     existing = result.scalar_one_or_none()
     
-    repo_info = {
-        "github_id": github_id,
-        "owner_username": owner_username.lower(),
-        "name": repo_data["name"],
-        "full_name": repo_data["full_name"],
-        "description": repo_data.get("description"),
-        "html_url": repo_data["html_url"],
-        "language": repo_data.get("language"),
-        "languages_data": languages_data,
-        "topics": repo_data.get("topics", []),
-        "stargazers_count": repo_data.get("stargazers_count", 0),
-        "watchers_count": repo_data.get("watchers_count", 0),
-        "forks_count": repo_data.get("forks_count", 0),
-        "open_issues_count": repo_data.get("open_issues_count", 0),
-        "size_kb": repo_data.get("size", 0),
-        "is_fork": repo_data.get("fork", False),
-        "is_archived": repo_data.get("archived", False),
-        "is_private": repo_data.get("private", False),
-        "default_branch": repo_data.get("default_branch", "main"),
-        "github_created_at": datetime.fromisoformat(repo_data["created_at"].replace("Z", "+00:00")),
-        "github_updated_at": datetime.fromisoformat(repo_data["updated_at"].replace("Z", "+00:00")),
-        "github_pushed_at": datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00")) if repo_data.get("pushed_at") else None,
-        "last_synced_at": datetime.now(timezone.utc),
-    }
+    repo_info = normalize_github_repository(repo_data, languages_data)
+    repo_info["owner_username"] = owner_username.lower()
     
     if existing:
         await session.execute(
