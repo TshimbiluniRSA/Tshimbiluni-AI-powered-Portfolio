@@ -91,7 +91,7 @@ CV TEXT:
         response = await llm_client.chat(
             message=prompt,
             provider=ModelProvider.GEMINI,  # Force Gemini for CV parsing
-            model="gemini-2.5-pro",
+            model="gemini-2.5-flash-lite",
             db_session=session,
             max_tokens=4096,
             temperature=0.3  # Lower temperature for more accurate extraction
@@ -107,7 +107,7 @@ CV TEXT:
             "education": parsed_data.get("education", []),
             "certifications": parsed_data.get("certifications", []),
             "languages_spoken": parsed_data.get("languages", []),
-            "ai_model_used": response.get("model", "gemini-2.5-pro"),
+            "ai_model_used": response.get("model", "gemini-2.5-flash-lite"),
         }
         
     except json.JSONDecodeError as e:
@@ -139,7 +139,7 @@ async def save_cv(
     
     Args:
         session: Database session
-        file_path: Path to saved CV file
+        file_path: Path to saved CV
         filename: Original filename
         file_size: File size in bytes
         user_id: User identifier
