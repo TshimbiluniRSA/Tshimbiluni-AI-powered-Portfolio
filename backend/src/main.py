@@ -1,11 +1,12 @@
 import logging
+import os
 import sys
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
-from db.database import init_db, close_db
+from db.database import check_db_health, init_db, close_db
 from routers import github, linkedin, chat, repositories, cv
 
 # Configure logging
@@ -27,9 +28,14 @@ app = FastAPI(
 )
 
 # CORS configuration
+frontend_url = os.getenv(
+    "FRONTEND_URL",
+    "https://tshimbiluni-ai-powered-portfolio-1.onrender.com",
+).rstrip("/")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust in production!
+    allow_origins=[frontend_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -41,6 +47,24 @@ app.include_router(linkedin.router)
 app.include_router(chat.router)
 app.include_router(repositories.router)
 app.include_router(cv.router)
+
+@app.get("/health")
+async def health():
+    """Liveness probe that does not depend on database connectivity."""
+    return {"status": "ok", "service": "Tshimbiluni AI-powered Portfolio"}
+
+
+@app.get("/ready")
+async def ready():
+    """Readiness probe that verifies database connectivity."""
+    if await check_db_health():
+        return {"status": "ready", "database": "connected"}
+
+    return JSONResponse(
+        status_code=503,
+        content={"status": "not_ready", "database": "disconnected"},
+    )
+
 
 # Redirect root to docs
 @app.get("/", include_in_schema=False)

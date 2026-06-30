@@ -207,6 +207,60 @@ For production, ensure you:
 - Set up monitoring and logging
 - Configure rate limiting
 
+
+## 🩺 Backend Production Hardening
+
+### Health and readiness checks
+
+The FastAPI backend exposes two deployment probe endpoints:
+
+- `GET /health` returns liveness status without touching the database. Use this for basic process health checks.
+- `GET /ready` verifies database connectivity and returns HTTP 503 when the configured database is unavailable. Use this for readiness checks before sending traffic to a new instance.
+
+### Backend CORS configuration
+
+The backend reads `FRONTEND_URL` from environment variables and allows that origin only. If the value has a trailing slash, the app removes it before configuring CORS. For Render production, set:
+
+```env
+FRONTEND_URL=https://tshimbiluni-ai-powered-portfolio-1.onrender.com
+```
+
+Do not use `*` for production CORS origins.
+
+### Database migrations with Alembic
+
+Alembic configuration lives in `backend/src/alembic.ini`, with migration scripts under `backend/src/alembic`. Alembic reads `DATABASE_URL` from the environment; Render should keep `DATABASE_URL` configured as an environment variable for the backend service.
+
+Run migrations locally from `backend/src`:
+
+```bash
+cd backend/src
+alembic upgrade head
+```
+
+Create a new migration after changing SQLAlchemy models:
+
+```bash
+cd backend/src
+alembic revision --autogenerate -m "describe schema change"
+alembic upgrade head
+```
+
+For Render deployments, run migrations against the production `DATABASE_URL` before routing traffic to the new version, or immediately after deploy before enabling traffic if your deployment flow requires the new code first. A safe manual flow is:
+
+```bash
+cd backend/src
+alembic upgrade head
+```
+
+Then start or restart the backend with the usual command:
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+Keep secrets such as database credentials in Render environment variables; do not commit `.env` files.
+
 ## 🛠️ Technology Stack
 
 ### Frontend

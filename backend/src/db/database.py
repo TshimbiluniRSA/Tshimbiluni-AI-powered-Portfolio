@@ -12,6 +12,18 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/portfolio.db")
 ASYNC_DATABASE_URL = os.getenv("ASYNC_DATABASE_URL") or DATABASE_URL
 
+
+def make_sync_database_url(database_url: str) -> str:
+    """Convert async SQLAlchemy URLs to sync URLs for sync engines/migrations."""
+    if database_url.startswith("postgresql+asyncpg://"):
+        return database_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+    if database_url.startswith("sqlite+aiosqlite://"):
+        return database_url.replace("sqlite+aiosqlite://", "sqlite://", 1)
+    return database_url
+
+
+SYNC_DATABASE_URL = make_sync_database_url(DATABASE_URL)
+
 # Determine if we're using SQLite or PostgreSQL
 is_sqlite = "sqlite" in ASYNC_DATABASE_URL.lower()
 
@@ -40,7 +52,7 @@ async_engine = create_async_engine(
 
 # Create sync engine for migrations and initial setup
 sync_engine = create_engine(
-    DATABASE_URL,
+    SYNC_DATABASE_URL,
     echo=os.getenv("DEBUG", "false").lower() == "true",
     connect_args=sync_connect_args,
     pool_pre_ping=True,
@@ -105,7 +117,12 @@ def get_db():
 
 # Database initialization
 async def init_db() -> None:
-    """Initialize the database by creating all tables."""
+    """Initialize missing tables for local/dev startup.
+
+    Production schema changes should be managed with Alembic migrations, not
+    ad-hoc create_all updates. This helper remains for backward compatibility
+    and lightweight local development.
+    """
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
