@@ -1,102 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import './Projects.css';
 import { api } from '../api/client';
-
-interface Project {
-  id: number;
-  name: string;
-  description?: string;
-  language?: string;
-  topics?: string[];
-  stars?: number;
-  forks?: number;
-  html_url: string;
-}
-
-const Projects: React.FC = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        // Fetch featured repositories
-        const data = await api.repositories.getFeatured();
-        setProjects(data);
-      } catch (error) {
-        console.error('Failed to fetch projects:', error);
-        // Fallback: fetch all repos
-        try {
-          const data = await api.repositories.getByUsername('TshimbiluniRSA', 1, 6);
-          setProjects(data.items || []);
-        } catch (fallbackError) {
-          console.error('Fallback fetch failed:', fallbackError);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProjects();
-  }, []);
-
-  if (loading) {
-    return (
-      <section id="projects" className="projects">
-        <div className="container">
-          <h2 className="section-title">Featured Projects</h2>
-          <p className="loading">Loading projects...</p>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section id="projects" className="projects">
-      <div className="container">
-        <h2 className="section-title">Featured Projects</h2>
-        <div className="projects-grid">
-          {projects.map((project) => (
-            <div key={project.id} className="project-card">
-              <h3 className="project-title">{project.name}</h3>
-              <p className="project-description">
-                {project.description || 'No description available'}
-              </p>
-              
-              {/* Language badge */}
-              {project.language && (
-                <span className="language-badge">{project.language}</span>
-              )}
-              
-              {/* Technologies from topics */}
-              {project.topics && project.topics.length > 0 && (
-                <div className="project-technologies">
-                  {project.topics.slice(0, 5).map((topic: string, idx: number) => (
-                    <span key={idx} className="tech-tag">{topic}</span>
-                  ))}
-                </div>
-              )}
-              
-              {/* Stats */}
-              <div className="project-stats">
-                <span>⭐ {project.stars || 0}</span>
-                <span>🍴 {project.forks || 0}</span>
-              </div>
-              
-              <a 
-                href={project.html_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="project-link"
-              >
-                View on GitHub →
-              </a>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
+import { useInView } from '../hooks/useInView';
+interface Project { id:number; name:string; description?:string; language?:string; topics?:string[]; stars?:number; forks?:number; html_url:string; }
+const portfolioCopy = 'This portfolio is more than a static website. It is a full-stack application designed to present my work, skills, and career direction while demonstrating my ability to connect frontend design, backend APIs, AI features, and deployment workflows.';
+const Projects: React.FC = () => { const [projects,setProjects]=useState<Project[]>([]); const [loading,setLoading]=useState(true); const { ref, isInView } = useInView<HTMLElement>(); useEffect(()=>{(async()=>{try{setProjects(await api.repositories.getFeatured())}catch(e){console.error('Failed to fetch projects:',e); try{const data=await api.repositories.getByUsername('TshimbiluniRSA',1,6); setProjects(data.items||[])}catch(err){console.error('Fallback fetch failed:',err)}}finally{setLoading(false)}})()},[]);
+const normalized = projects.map((project,index)=> index===0 ? {...project, name:'AI-Powered Developer Portfolio', description: portfolioCopy, topics:['React','TypeScript','FastAPI','Python','AI Integration','Render','Docker']} : project);
+return <section id="projects" className="projects" ref={ref}><div className="container"><p className="section-kicker">Case Studies</p><h2 className={`section-title reveal ${isInView ? 'is-visible' : ''}`}>Featured Projects</h2><p className="section-intro">Projects that show how I think about practical problems, engineering value, implementation choices, and delivery.</p>{loading ? <p className="loading">Loading projects...</p> : <div className="projects-grid">{normalized.map((project,index)=><article key={project.id} className={`project-card ${index===0?'featured-project':''} reveal ${isInView ? 'is-visible' : ''}`} style={{ '--reveal-delay': `${index * 0.08}s` } as React.CSSProperties}><div className="project-card-header"><span>{index===0?'Featured':'Repository'}</span>{project.language&&<em>{project.language}</em>}</div><h3 className="project-title">{project.name}</h3><p className="project-description">{project.description || 'A repository that demonstrates practical engineering practice, implementation choices, and continued learning through real code.'}</p><p className="project-value"><strong>Engineering value:</strong> demonstrates problem breakdown, API-first thinking, maintainable code structure, and production-aware delivery habits.</p>{project.topics?.length ? <div className="project-technologies">{project.topics.slice(0,7).map(topic=><span key={topic} className="tech-tag">{topic}</span>)}</div>:null}<div className="project-footer"><span className="project-stats">⭐ {project.stars || 0} · 🍴 {project.forks || 0}</span><a href={project.html_url} target="_blank" rel="noopener noreferrer" className="project-link">View on GitHub →</a></div></article>)}</div>}</div></section>};
 export default Projects;

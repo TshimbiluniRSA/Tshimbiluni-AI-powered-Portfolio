@@ -89,4 +89,4 @@ zipp==3.23.0
 PyPDF2==3.0.1
 
 alembic==1.16.4
-psycopg==3.2.9
+psycopg[binary]==3.2.9

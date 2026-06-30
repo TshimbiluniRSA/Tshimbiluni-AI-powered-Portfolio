@@ -1,116 +1,12 @@
-.about {
-  padding: 6rem 0;
-  background: var(--bg-secondary);
-  transition: background 0.3s ease;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 2rem;
-}
-
-.section-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 3rem;
-  color: var(--text-primary);
-}
-
-.about-content {
-  display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: 3rem;
-  align-items: start;
-}
-
-.about-text {
-  font-size: 1.1rem;
-  line-height: 1.8;
-  color: var(--text-secondary);
-}
-
-.about-text p {
-  margin-bottom: 1.5rem;
-}
-
-.about-highlights {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.highlight-card {
-  background: var(--card-bg);
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px var(--card-shadow);
-  transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
-}
-
-.highlight-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 12px var(--card-shadow);
-}
-
-.highlight-card h3 {
-  font-size: 1.25rem;
-  margin-bottom: 0.5rem;
-  color: var(--text-primary);
-}
-
-.highlight-card p {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  margin: 0;
-}
-
-.experience-highlight {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  background: var(--card-bg);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px var(--card-shadow);
-}
-
-.experience-highlight h3 {
-  color: var(--text-primary);
-  margin-bottom: 1rem;
-}
-
-.role-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--accent-primary);
-  margin-bottom: 0.5rem;
-}
-
-.role-company, .role-duration {
-  color: var(--text-secondary);
-  margin-bottom: 0.5rem;
-}
-
-.download-cv-btn {
-  margin-top: 1rem;
-  padding: 1rem 2rem;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.3s, box-shadow 0.3s;
-  width: 100%;
-}
-
-.download-cv-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--card-shadow);
-}
-
-@media (max-width: 968px) {
-  .about-content {
-    grid-template-columns: 1fr;
-  }
-}
+.about { padding: 5rem 0; background: var(--bg-secondary); }
+.about-content { display: grid; grid-template-columns: 1.15fr .85fr; gap: 4rem; align-items: start; }
+.about-text { font-size: var(--text-lg); line-height: 1.8; color: var(--text-secondary); }
+.about-text p { margin-bottom: 1.35rem; }
+.about-highlights { display: grid; gap: 1rem; }
+.highlight-row { display: grid; grid-template-columns: auto 1fr; gap: 1rem; padding: 1.25rem 0 1.25rem 1.25rem; border-left: 3px solid var(--accent-primary); border-bottom: 1px solid var(--border-color); color: var(--text-secondary); }
+.highlight-row span { font-size: var(--text-xl); } .highlight-row h3 { color: var(--text-primary); font-size: var(--text-xl); margin-bottom: .4rem; } .highlight-row p { line-height: 1.65; }
+.experience-highlight { margin: 2rem 0 1rem; padding: 1.25rem; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; }
+.experience-highlight h3 { color: var(--text-primary); margin-bottom: .6rem; } .role-title { font-weight: 800; color: var(--accent-primary); }
+.download-cv-btn { margin-top: .5rem; padding: .9rem 1.3rem; background: var(--accent-primary); color: #fff; border: 0; border-radius: 999px; font-weight: 800; transition: background .2s, transform .2s; }
+.download-cv-btn:hover { background: var(--accent-secondary); transform: translateY(-2px); }
+@media (max-width: 900px) { .about-content { grid-template-columns: 1fr; gap: 2rem; } }
