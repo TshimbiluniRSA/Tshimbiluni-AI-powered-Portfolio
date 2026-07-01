@@ -35,8 +35,8 @@ class GeminiProvider:
             logger.warning("GEMINI_API_KEY not configured at startup")
 
         self.base_url = "https://generativelanguage.googleapis.com/v1beta"
-        self.model = "gemini-2.5-flash-lite"
-        self.backup_model = "gemini-2.5-flash-lite"
+        self.model = "gemini-flash-latest"
+        self.backup_model = "gemini-flash-latest"
 
     async def generate_response(
         self,
