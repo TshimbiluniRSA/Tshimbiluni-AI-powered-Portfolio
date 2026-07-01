@@ -36,7 +36,6 @@ class GeminiProvider:
 
         self.base_url = "https://generativelanguage.googleapis.com/v1beta"
         self.model = "gemini-flash-latest"
-        self.backup_model = "gemini-flash-latest"
 
     async def generate_response(
         self,
