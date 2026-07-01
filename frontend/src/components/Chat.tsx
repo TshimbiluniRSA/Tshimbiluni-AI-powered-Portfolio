@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { api } from '../api/client';
 import type { ChatMessage } from '../api/client';
 import './Chat.css';
@@ -80,7 +82,11 @@ const Chat: React.FC<ChatProps> = ({ onClose }) => {
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="welcome-message">
-            <p>👋 Hi! I'm your AI assistant. How can I help you today?</p>
+            <p>
+              👋 Hi! I'm Tshimbi's portfolio assistant. Ask me about his skills,
+              experience, projects, or career direction. For best results, keep
+              questions short and specific.
+            </p>
           </div>
         )}
         {messages.map((message) => (
@@ -89,7 +95,23 @@ const Chat: React.FC<ChatProps> = ({ onClose }) => {
             className={`message ${message.message_type === 'user' ? 'user-message' : 'assistant-message'}`}
           >
             <div className="message-content">
-              {message.content}
+              {message.message_type === 'user' ? (
+                message.content
+              ) : (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    // Open all links in a new tab — Gemini may include URLs in answers
+                    a: ({ href, children }: React.ComponentProps<'a'>) => (
+                      <a href={href} target="_blank" rel="noopener noreferrer">
+                        {children}
+                      </a>
+                    ),
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              )}
             </div>
             {message.message_type === 'assistant' && message.response_time_ms && (
               <div className="message-meta">
