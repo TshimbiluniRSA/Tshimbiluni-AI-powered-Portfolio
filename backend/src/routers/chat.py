@@ -19,6 +19,7 @@ from schemas import (
     HealthCheckResponse
 )
 from services.llm_client import get_llm_client, LLMClientError, ModelProvider
+from services.portfolio_context import build_system_prompt
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -84,6 +85,9 @@ async def send_message(
         # Force Gemini provider as requested
         provider = ModelProvider.GEMINI
         
+        # Build portfolio system prompt — tells the LLM who it is representing
+        system_prompt = await build_system_prompt(db_session=session)
+
         # Send message to LLM
         llm_client = get_llm_client()
         response_data = await llm_client.chat(
@@ -91,6 +95,7 @@ async def send_message(
             session_id=session_id,
             model=selected_model,
             provider=provider,
+            system_instruction=system_prompt,
             db_session=session,
             **request.metadata or {}
         )
@@ -145,12 +150,14 @@ async def stream_message(
             """Generate streaming response."""
             try:
                 llm_client = get_llm_client()
+                system_prompt = await build_system_prompt(db_session=session)
                 full_response = ""
                 async for chunk in llm_client.stream_chat(
                     message=request.message,
                     session_id=session_id,
                     model=selected_model,
                     provider=provider,
+                    system_instruction=system_prompt,
                     **request.metadata or {}
                 ):
                     full_response += chunk
@@ -417,9 +424,11 @@ async def simple_chat(
         logger.warning("Using deprecated chat endpoint")
         
         llm_client = get_llm_client()
+        system_prompt = await build_system_prompt(db_session=session)
         response_data = await llm_client.chat(
             message=question,
             provider=None,
+            system_instruction=system_prompt,
             db_session=session
         )
         
