@@ -14,6 +14,29 @@ from services.llm_client import get_llm_client, ModelProvider
 logger = logging.getLogger(__name__)
 
 
+def _truncate_cv_text(text: str, max_chars: int = 6000) -> str:
+    """
+    Cap CV text before sending to the LLM.
+
+    Why 6000 chars: a dense two-page technical CV extracts to roughly
+    4,000–5,500 characters. 6,000 gives full coverage while keeping the
+    total prompt under ~2,000 tokens — well within the model's efficient
+    operating range even under load.
+
+    If the text is truncated, a note is appended so the model knows the
+    input was cut and does not hallucinate content for the missing section.
+    """
+    if len(text) <= max_chars:
+        return text
+    truncated = text[:max_chars]
+    logger.warning(
+        "CV text truncated from %d to %d characters before LLM call.",
+        len(text),
+        max_chars,
+    )
+    return truncated + "\n\n[CV text truncated at extraction limit — extract only what is visible above]"
+
+
 class CVParserError(Exception):
     """Custom exception for CV parsing errors."""
     pass
@@ -46,6 +69,9 @@ async def parse_cv_with_ai(
     Returns:
         Dict with parsed CV data
     """
+    # Cap the input before embedding in the prompt
+    cv_text = _truncate_cv_text(cv_text)
+
     prompt = f"""
 You are an expert CV/Resume parser. Parse the following CV and extract structured information.
 
