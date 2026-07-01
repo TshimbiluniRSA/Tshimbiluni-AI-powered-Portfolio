@@ -42,6 +42,7 @@ class GeminiProvider:
         message: str,
         model: Optional[str] = None,
         context: Optional[List[Dict[str, str]]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """Generate response from Gemini model."""
@@ -72,6 +73,13 @@ class GeminiProvider:
                 "maxOutputTokens": max_tokens
             }
         }
+
+        # Gemini system instruction — sets persona/context for the whole conversation.
+        # Must be a top-level field, not part of contents.
+        if system_instruction:
+            payload["system_instruction"] = {
+                "parts": [{"text": system_instruction}]
+            }
 
         current_model = model_name
         url = f"{self.base_url}/models/{current_model}:generateContent"
@@ -121,6 +129,7 @@ class GeminiProvider:
         message: str,
         model: Optional[str] = None,
         context: Optional[List[Dict[str, str]]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs
     ) -> AsyncGenerator[str, None]:
         """Stream response from Gemini model."""
@@ -151,6 +160,13 @@ class GeminiProvider:
                 "maxOutputTokens": max_tokens
             }
         }
+
+        # Gemini system instruction — sets persona/context for the whole conversation.
+        # Must be a top-level field, not part of contents.
+        if system_instruction:
+            payload["system_instruction"] = {
+                "parts": [{"text": system_instruction}]
+            }
 
         current_model = model_name
         url = f"{self.base_url}/models/{current_model}:streamGenerateContent?alt=sse"
@@ -201,6 +217,7 @@ class LLMClient:
         model: Optional[str] = None,
         provider: Optional[ModelProvider] = None,  # Left for backward compatibility in method signature
         context: Optional[List[Dict[str, str]]] = None,
+        system_instruction: Optional[str] = None,
         db_session: Optional[AsyncSession] = None,
         **kwargs
     ) -> Dict[str, Any]:
@@ -216,6 +233,7 @@ class LLMClient:
                 message=message,
                 model=model,
                 context=context or conversation_history,
+                system_instruction=system_instruction,
                 max_tokens=kwargs.get('max_tokens', self.max_tokens),
                 temperature=kwargs.get('temperature', self.temperature)
             )
@@ -274,6 +292,7 @@ class LLMClient:
         model: Optional[str] = None,
         provider: Optional[ModelProvider] = None,  # Left for backward compatibility
         context: Optional[List[Dict[str, str]]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs
     ) -> AsyncGenerator[str, None]:
         """Stream chat response from Gemini."""
@@ -281,6 +300,7 @@ class LLMClient:
             message=message,
             model=model,
             context=context,
+            system_instruction=system_instruction,
             **kwargs
         ):
             yield chunk
