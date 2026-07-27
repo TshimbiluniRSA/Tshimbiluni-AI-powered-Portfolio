@@ -94,7 +94,7 @@ Certifications:
 
 Notable projects:
 1. AI-Powered Developer Portfolio
-A full-stack portfolio application built with React, TypeScript, FastAPI, PostgreSQL, Gemini integration, and Render deployment. The project demonstrates his ability to connect frontend design, backend APIs, database-backed content, AI chat, CV parsing, GitHub profile/repository sync, and deployment into one working application.
+A full-stack portfolio application built with React, TypeScript, FastAPI, PostgreSQL, OpenAI integration, and Render deployment. The project demonstrates his ability to connect frontend design, backend APIs, database-backed content, AI chat, CV parsing, GitHub profile/repository sync, and deployment into one working application.
 
 2. Context-Window-Aware RAG System
 A RAG-focused technical assessment project exploring how to manage limited context windows, structure retrieved information, and produce better AI-assisted answers. This project shows his interest in practical LLM system design rather than simple chatbot demos.

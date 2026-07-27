@@ -60,7 +60,7 @@ async def parse_cv_with_ai(
     session: Optional[AsyncSession] = None
 ) -> Dict[str, Any]:
     """
-    Use AI (Gemini) to parse CV and extract structured data.
+    Use OpenAI to parse CV and extract structured data.
     
     Args:
         cv_text: Raw text extracted from CV
@@ -110,14 +110,13 @@ CV TEXT:
 """
     
     try:
-        # Get LLM client (uses Gemini based on DEFAULT_LLM_PROVIDER)
+        # Use the same OpenAI client as the portfolio chat.
         llm_client = get_llm_client()
         
         # Call AI with higher token limit for CV parsing
         response = await llm_client.chat(
             message=prompt,
-            provider=ModelProvider.GEMINI,  # Force Gemini for CV parsing
-            model="gemini-flash-latest",
+            provider=ModelProvider.OPENAI,
             db_session=session,
             max_tokens=4096,
             temperature=0.3  # Lower temperature for more accurate extraction
@@ -133,7 +132,7 @@ CV TEXT:
             "education": parsed_data.get("education", []),
             "certifications": parsed_data.get("certifications", []),
             "languages_spoken": parsed_data.get("languages", []),
-            "ai_model_used": response.get("model", "gemini-flash-latest"),
+            "ai_model_used": response.get("model", "gpt-5-mini"),
         }
         
     except json.JSONDecodeError as e:

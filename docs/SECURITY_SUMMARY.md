@@ -1,5 +1,8 @@
 # Security Summary - API Keys Setup
 
+> **Historical document:** This describes the previous Gemini-based implementation and is retained only as project history. Current configuration is documented in `ENVIRONMENT_VARIABLES.md`.
+
+
 ## Overview
 This document summarizes the security measures implemented to protect API keys and tokens in this repository.
 

@@ -4,7 +4,7 @@
 
 ## 🌟 Features
 
-- **AI-Powered Chat**: Integrated chat interface supporting multiple LLM providers (LLaMA, OpenAI, Anthropic, Gemini, Ollama)
+- **AI-Powered Chat**: Integrated chat interface powered by the OpenAI Responses API
 - **GitHub Integration**: Automatic sync and display of GitHub profile data
 - **LinkedIn Integration**: Scrape and display LinkedIn profile information
 - **Responsive Design**: Mobile-first, fully responsive UI
@@ -115,13 +115,13 @@ Tshimbiluni-AI-powered-Portfolio/
 Key environment variables for the backend (see `backend/.env.example` for full list):
 
 ```env
-# LLM Provider (choose one)
-LLAMA_API_URL=https://api-inference.huggingface.co/models/...
-HUGGINGFACE_TOKEN=your_token_here
+# OpenAI Responses API
 OPENAI_API_KEY=your_key_here
-ANTHROPIC_API_KEY=your_key_here
-GEMINI_API_KEY=your_key_here
-OLLAMA_BASE_URL=http://localhost:11434
+OPENAI_MODEL=gpt-5-mini
+OPENAI_MAX_OUTPUT_TOKENS=800
+OPENAI_REASONING_EFFORT=low
+OPENAI_TIMEOUT_SECONDS=60
+OPENAI_CONTEXT_MESSAGE_LIMIT=10
 
 # GitHub
 GITHUB_TOKEN=your_github_token

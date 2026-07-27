@@ -82,8 +82,7 @@ async def send_message(
         
         # Determine provider and model
         selected_model = _normalize_requested_model(request.model)
-        # Force Gemini provider as requested
-        provider = ModelProvider.GEMINI
+        provider = ModelProvider.OPENAI
         
         # Build portfolio system prompt — tells the LLM who it is representing
         system_prompt = await build_system_prompt(db_session=session)
@@ -142,9 +141,8 @@ async def stream_message(
         
         logger.info(f"Starting streaming chat for session: {session_id[:8]}...")
         
-        # Force Gemini provider for streaming as requested
         selected_model = _normalize_requested_model(request.model)
-        provider = ModelProvider.GEMINI
+        provider = ModelProvider.OPENAI
         
         async def generate_stream():
             """Generate streaming response."""
@@ -158,6 +156,7 @@ async def stream_message(
                     model=selected_model,
                     provider=provider,
                     system_instruction=system_prompt,
+                    db_session=session,
                     **request.metadata or {}
                 ):
                     full_response += chunk
@@ -397,7 +396,7 @@ async def health_check(
     # Check LLM providers (simplified)
     llm_client = get_llm_client()
     external_apis = {
-        "gemini": bool(llm_client.provider_client.api_key)
+        "openai": bool(llm_client.provider_client.api_key)
     }
     
     return HealthCheckResponse(

@@ -41,12 +41,13 @@ LOG_LEVEL=INFO
 # Database (PostgreSQL for production)
 DATABASE_URL=postgresql+asyncpg://user:password@db:5432/portfolio
 
-# LLM Provider (configure at least one)
-LLAMA_API_URL=https://api-inference.huggingface.co/models/...
-HUGGINGFACE_TOKEN=your_production_token
-
-# OR use OpenAI
+# OpenAI Responses API (required for chat and CV parsing)
 OPENAI_API_KEY=your_openai_key
+OPENAI_MODEL=gpt-5-mini
+OPENAI_MAX_OUTPUT_TOKENS=800
+OPENAI_REASONING_EFFORT=low
+OPENAI_TIMEOUT_SECONDS=60
+OPENAI_CONTEXT_MESSAGE_LIMIT=10
 
 # Security
 SESSION_SECRET_KEY=your_very_long_random_secret_key_here_min_32_chars
