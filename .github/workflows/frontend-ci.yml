@@ -69,8 +69,25 @@ jobs:
 
     - name: Test Docker image
       run: |
-        docker run -d --name test-frontend -p 8080:80 portfolio-frontend:${{ github.sha }}
-        sleep 10
-        curl -f http://localhost:8080/health || exit 1
-        docker stop test-frontend
-        docker rm test-frontend
+        cleanup() {
+          docker rm -f test-frontend >/dev/null 2>&1 || true
+        }
+        trap cleanup EXIT
+
+        # nginx resolves the configured `backend` upstream while starting. The
+        # production Compose network provides that hostname; this standalone
+        # image smoke test provides an equivalent placeholder.
+        docker run -d --name test-frontend \
+          --add-host backend:127.0.0.1 \
+          -p 8080:80 \
+          portfolio-frontend:${{ github.sha }}
+
+        for attempt in {1..10}; do
+          if curl --fail --silent --show-error http://localhost:8080/health; then
+            exit 0
+          fi
+          sleep 1
+        done
+
+        docker logs test-frontend
+        exit 1
