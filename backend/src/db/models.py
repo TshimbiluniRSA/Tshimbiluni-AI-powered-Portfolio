@@ -182,7 +182,7 @@ class CV(Base, TimestampMixin):
     # Metadata
     parsing_status = Column(String(20), default="pending", doc="pending, success, failed")
     parsing_error = Column(Text, doc="Error message if parsing failed")
-    ai_model_used = Column(String(50), doc="AI model used for parsing e.g. 'gemini-pro'")
+    ai_model_used = Column(String(50), doc="AI model used for parsing, e.g. 'gpt-5-mini'")
     
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
     parsed_at = Column(DateTime(timezone=True))

@@ -101,7 +101,7 @@ const Chat: React.FC<ChatProps> = ({ onClose }) => {
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    // Open all links in a new tab — Gemini may include URLs in answers
+                    // Open all assistant-provided links in a new tab.
                     a: ({ href, children }: React.ComponentProps<'a'>) => (
                       <a href={href} target="_blank" rel="noopener noreferrer">
                         {children}

@@ -1,5 +1,8 @@
 # Implementation Summary: Comprehensive Portfolio Enhancement
 
+> **Historical document:** This describes the previous Gemini-based implementation and is retained only as project history. Current configuration is documented in `ENVIRONMENT_VARIABLES.md`.
+
+
 This document summarizes the implementation of the comprehensive portfolio enhancement including LLM fix, GitHub projects caching, CV management with AI parsing, and LinkedIn OAuth integration.
 
 ## 🎯 Problems Solved

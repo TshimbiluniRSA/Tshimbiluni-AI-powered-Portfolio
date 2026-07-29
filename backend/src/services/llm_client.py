@@ -1,41 +1,162 @@
-import json
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any, AsyncGenerator
 from enum import Enum
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
-import httpx
+from openai import (
+    APIConnectionError,
+    APIStatusError,
+    APITimeoutError,
+    AsyncOpenAI,
+    AuthenticationError,
+    BadRequestError,
+    NotFoundError,
+    RateLimitError,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models import ChatHistory, APIUsageLog
+from db.models import APIUsageLog, ChatHistory
 from schemas import MessageType
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
 
 class ModelProvider(str, Enum):
     """Supported model providers."""
-    GEMINI = "gemini"
+
+    OPENAI = "openai"
 
 
 class LLMClientError(Exception):
-    """Custom exception for LLM client errors."""
-    pass
+    """A safe, user-readable LLM client error."""
 
 
-class GeminiProvider:
-    """Provider for Google Gemini models."""
+class OpenAIProvider:
+    """OpenAI Responses API provider."""
 
-    def __init__(self):
-        """Initialize the Gemini provider."""
-        self.api_key = os.getenv("GEMINI_API_KEY")
+    def __init__(self) -> None:
+        self.api_key = os.getenv("OPENAI_API_KEY")
+        self.model = os.getenv("OPENAI_MODEL", "gpt-5-mini")
+        self.max_tokens = int(
+            os.getenv("OPENAI_MAX_OUTPUT_TOKENS", os.getenv("MAX_TOKENS", "800"))
+        )
+        self.reasoning_effort = os.getenv("OPENAI_REASONING_EFFORT", "low")
+        self.timeout_seconds = float(os.getenv("OPENAI_TIMEOUT_SECONDS", "60"))
+        self.context_message_limit = int(
+            os.getenv("OPENAI_CONTEXT_MESSAGE_LIMIT", "10")
+        )
+        self.client = (
+            AsyncOpenAI(api_key=self.api_key, timeout=self.timeout_seconds)
+            if self.api_key
+            else None
+        )
         if not self.api_key:
-            logger.warning("GEMINI_API_KEY not configured at startup")
+            logger.warning(
+                "OpenAI provider is disabled: OPENAI_API_KEY is not configured"
+            )
 
-        self.base_url = "https://generativelanguage.googleapis.com/v1beta"
-        self.model = "gemini-flash-latest"
+    def _require_client(self) -> AsyncOpenAI:
+        if self.client is None:
+            raise LLMClientError("OPENAI_API_KEY is not configured")
+        return self.client
+
+    def _build_input_messages(
+        self, message: str, context: Optional[List[Dict[str, str]]]
+    ) -> List[Dict[str, str]]:
+        messages: List[Dict[str, str]] = []
+        recent_context = (
+            (context or [])[-self.context_message_limit :]
+            if self.context_message_limit > 0
+            else []
+        )
+        for item in recent_context:
+            role = str(item.get("role", "")).lower()
+            if role in {"user", "human"}:
+                mapped_role = "user"
+            elif role in {"assistant", "model", "ai"}:
+                mapped_role = "assistant"
+            else:
+                continue
+            messages.append(
+                {"role": mapped_role, "content": str(item.get("content", ""))}
+            )
+        messages.append({"role": "user", "content": message})
+        return messages
+
+    @staticmethod
+    def _supports_temperature(model: str) -> bool:
+        return not model.lower().startswith("gpt-5")
+
+    def _build_request_options(
+        self,
+        message: str,
+        model: Optional[str],
+        context: Optional[List[Dict[str, str]]],
+        system_instruction: Optional[str],
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        model_name = model or self.model
+        options: Dict[str, Any] = {
+            "model": model_name,
+            "input": self._build_input_messages(message, context),
+            "max_output_tokens": kwargs.get("max_tokens", self.max_tokens),
+        }
+        if system_instruction:
+            options["instructions"] = system_instruction
+        if model_name.lower().startswith("gpt-5") and self.reasoning_effort:
+            options["reasoning"] = {"effort": self.reasoning_effort}
+        temperature = kwargs.get("temperature")
+        if temperature is not None and self._supports_temperature(model_name):
+            options["temperature"] = temperature
+        return options
+
+    @staticmethod
+    def _extract_usage(response: Any) -> Tuple[int, int, int]:
+        usage = getattr(response, "usage", None)
+        input_tokens = getattr(usage, "input_tokens", 0) or 0
+        output_tokens = getattr(usage, "output_tokens", 0) or 0
+        total_tokens = getattr(usage, "total_tokens", 0) or 0
+        return input_tokens, output_tokens, total_tokens
+
+    def _convert_error(self, error: Exception, model: str) -> LLMClientError:
+        status = getattr(error, "status_code", None)
+        request_id = getattr(error, "request_id", None)
+        category = type(error).__name__
+        logger.error(
+            "OpenAI request failed provider=openai model=%s category=%s status=%s request_id=%s",
+            model,
+            category,
+            status,
+            request_id,
+        )
+        if isinstance(error, AuthenticationError):
+            message = "OpenAI authentication failed; verify OPENAI_API_KEY"
+        elif isinstance(error, RateLimitError):
+            code = getattr(error, "code", None)
+            if code == "insufficient_quota" or "quota" in str(error).lower():
+                message = "OpenAI quota or billing limit has been reached"
+            else:
+                message = "OpenAI rate limit reached; please try again shortly"
+        elif isinstance(error, NotFoundError):
+            message = f"OpenAI model '{model}' was not found or is unavailable"
+        elif isinstance(error, BadRequestError):
+            message = (
+                "OpenAI rejected the model request; verify the model and parameters"
+            )
+        elif isinstance(error, APITimeoutError):
+            message = "OpenAI request timed out; please try again"
+        elif isinstance(error, APIConnectionError):
+            message = "Unable to connect to OpenAI; please try again"
+        elif isinstance(error, APIStatusError):
+            message = (
+                f"OpenAI API request failed with HTTP status {status or 'unknown'}"
+            )
+        else:
+            message = "Unexpected OpenAI API error"
+        if request_id:
+            message += f" (request ID: {request_id})"
+        return LLMClientError(message)
 
     async def generate_response(
         self,
@@ -43,86 +164,35 @@ class GeminiProvider:
         model: Optional[str] = None,
         context: Optional[List[Dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
-        **kwargs
+        **kwargs: Any,
     ) -> Dict[str, Any]:
-        """Generate response from Gemini model."""
-        if not self.api_key:
-            raise LLMClientError("GEMINI_API_KEY not configured")
-
-        model_name = model or self.model
-        temperature = kwargs.get('temperature', 0.7)
-        max_tokens = kwargs.get('max_tokens', 2048)
-
-        contents = []
-        if context:
-            for msg in context[-10:]:
-                role = "user" if msg.get("role") in ["user", "human"] else "model"
-                contents.append({"role": role, "parts": [{"text": msg.get("content", "")}]})
-
-        contents.append({"role": "user", "parts": [{"text": message}]})
-
-        headers = {
-            "Content-Type": "application/json",
-            "x-goog-api-key": self.api_key
-        }
-
-        payload = {
-            "contents": contents,
-            "generationConfig": {
-                "temperature": temperature,
-                "maxOutputTokens": max_tokens
-            }
-        }
-
-        # Gemini system instruction — sets persona/context for the whole conversation.
-        # Must be a top-level field, not part of contents.
-        if system_instruction:
-            payload["system_instruction"] = {
-                "parts": [{"text": system_instruction}]
-            }
-
-        current_model = model_name
-        url = f"{self.base_url}/models/{current_model}:generateContent"
+        client = self._require_client()
+        options = self._build_request_options(
+            message, model, context, system_instruction, **kwargs
+        )
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
-                response = await client.post(url, json=payload, headers=headers)
-                response.raise_for_status()
+            response = await client.responses.create(**options)
+        except LLMClientError:
+            raise
+        except Exception as error:
+            raise self._convert_error(error, options["model"]) from error
 
-                result = response.json()
-
-                generated_text = ""
-                if "candidates" in result and len(result["candidates"]) > 0:
-                    candidate = result["candidates"][0]
-                    parts = candidate.get("content", {}).get("parts", [])
-                    generated_text = parts[0].get("text", "") if parts else ""
-
-                usage_metadata = result.get("usageMetadata", {})
-                tokens_used = usage_metadata.get("totalTokenCount", 0)
-
-                return {
-                    "content": generated_text.strip(),
-                    "model": current_model,
-                    "tokens_used": tokens_used,
-                    "metadata": {
-                        "provider": "gemini",
-                        "prompt_tokens": usage_metadata.get("promptTokenCount", 0),
-                        "candidates_count": len(result.get("candidates", [])),
-                    }
-                }
-        except httpx.HTTPStatusError as e:
-            try:
-                error_data = e.response.json()
-                error_details = error_data.get("error", {}).get("message", str(error_data.get("error")))
-            except Exception:
-                error_details = e.response.text
-
-            last_error = f"API error ({e.response.status_code}): {error_details}"
-            logger.warning(f"Request failed with model {current_model}: {last_error}")
-            raise LLMClientError(f"Gemini API request failed. Last error: {last_error}")
-        except httpx.RequestError as e:
-            last_error = f"Request failed: {str(e)}"
-            logger.warning(f"Request failed with model {current_model}: {last_error}")
-            raise LLMClientError(f"Gemini API request failed. Last error: {last_error}")
+        generated_text = (getattr(response, "output_text", None) or "").strip()
+        if not generated_text:
+            raise LLMClientError("OpenAI returned an empty response")
+        input_tokens, output_tokens, total_tokens = self._extract_usage(response)
+        actual_model = getattr(response, "model", None) or options["model"]
+        return {
+            "content": generated_text,
+            "model": actual_model,
+            "tokens_used": total_tokens,
+            "metadata": {
+                "provider": "openai",
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "response_id": getattr(response, "id", None),
+            },
+        }
 
     async def stream_response(
         self,
@@ -130,226 +200,236 @@ class GeminiProvider:
         model: Optional[str] = None,
         context: Optional[List[Dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
-        **kwargs
+        **kwargs: Any,
     ) -> AsyncGenerator[str, None]:
-        """Stream response from Gemini model."""
-        if not self.api_key:
-            raise LLMClientError("GEMINI_API_KEY not configured")
-
-        model_name = model or self.model
-        temperature = kwargs.get('temperature', 0.7)
-        max_tokens = kwargs.get('max_tokens', 2048)
-
-        contents = []
-        if context:
-            for msg in context[-10:]:
-                role = "user" if msg.get("role") in ["user", "human"] else "model"
-                contents.append({"role": role, "parts": [{"text": msg.get("content", "")}]})
-
-        contents.append({"role": "user", "parts": [{"text": message}]})
-
-        headers = {
-            "Content-Type": "application/json",
-            "x-goog-api-key": self.api_key
-        }
-
-        payload = {
-            "contents": contents,
-            "generationConfig": {
-                "temperature": temperature,
-                "maxOutputTokens": max_tokens
-            }
-        }
-
-        # Gemini system instruction — sets persona/context for the whole conversation.
-        # Must be a top-level field, not part of contents.
-        if system_instruction:
-            payload["system_instruction"] = {
-                "parts": [{"text": system_instruction}]
-            }
-
-        current_model = model_name
-        url = f"{self.base_url}/models/{current_model}:streamGenerateContent?alt=sse"
+        client = self._require_client()
+        options = self._build_request_options(
+            message, model, context, system_instruction, **kwargs
+        )
+        options["stream"] = True
         try:
-            async with httpx.AsyncClient(timeout=120) as client:
-                async with client.stream("POST", url, json=payload, headers=headers) as response:
-                    response.raise_for_status()
-                    async for line in response.aiter_lines():
-                        if line.startswith("data: "):
-                            data_str = line[6:].strip()
-                            if data_str and data_str != "[DONE]":
-                                try:
-                                    data = json.loads(data_str)
-                                    if "candidates" in data and len(data["candidates"]) > 0:
-                                        parts = data["candidates"][0].get("content", {}).get("parts", [])
-                                        if parts and parts[0].get("text"):
-                                            yield parts[0].get("text")
-                                except json.JSONDecodeError:
-                                    pass
-        except httpx.HTTPStatusError as e:
-            try:
-                error_data = e.response.json()
-                error_details = error_data.get("error", {}).get("message", str(error_data.get("error")))
-            except Exception:
-                error_details = e.response.text
-            last_error = f"API error ({e.response.status_code}): {error_details}"
-            logger.warning(f"Streaming failed with model {current_model}: {last_error}")
-            raise LLMClientError(f"Gemini streaming failed. Last error: {last_error}")
-        except Exception as e:
-            last_error = f"Streaming failed: {str(e)}"
-            logger.warning(f"Streaming failed with model {current_model}: {last_error}")
-            raise LLMClientError(f"Gemini streaming failed. Last error: {last_error}")
+            stream = await client.responses.create(**options)
+            async for event in stream:
+                if getattr(event, "type", None) == "response.output_text.delta":
+                    delta = getattr(event, "delta", None)
+                    if delta:
+                        yield delta
+        except LLMClientError:
+            raise
+        except Exception as error:
+            raise self._convert_error(error, options["model"]) from error
 
 
 class LLMClient:
-    """Unified client for LLM interaction (now specific to Gemini)."""
+    """Unified client preserving the application's existing LLM interface."""
 
-    def __init__(self):
-        self.provider_client = GeminiProvider()
-        self.max_tokens = int(os.getenv("MAX_TOKENS", "2048"))
+    def __init__(self) -> None:
+        self.provider_client = OpenAIProvider()
+        self.max_tokens = int(
+            os.getenv("OPENAI_MAX_OUTPUT_TOKENS", os.getenv("MAX_TOKENS", "800"))
+        )
         self.temperature = float(os.getenv("TEMPERATURE", "0.7"))
-        logger.info("LLM Client initialized with Gemini")
+        logger.info("LLM client initialized with provider=openai")
 
     async def chat(
         self,
         message: str,
         session_id: Optional[str] = None,
         model: Optional[str] = None,
-        provider: Optional[ModelProvider] = None,  # Left for backward compatibility in method signature
+        provider: Optional[ModelProvider] = None,
         context: Optional[List[Dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
         db_session: Optional[AsyncSession] = None,
-        **kwargs
+        **kwargs: Any,
     ) -> Dict[str, Any]:
-        """Send a chat message to Gemini and get a response."""
+        """Send a chat message and return the established response contract."""
         start_time = datetime.now(timezone.utc)
-
         try:
             conversation_history = []
             if session_id and db_session:
-                conversation_history = await self._get_conversation_history(db_session, session_id)
-
+                conversation_history = await self._get_conversation_history(
+                    db_session, session_id
+                )
             response_data = await self.provider_client.generate_response(
                 message=message,
                 model=model,
                 context=context or conversation_history,
                 system_instruction=system_instruction,
-                max_tokens=kwargs.get('max_tokens', self.max_tokens),
-                temperature=kwargs.get('temperature', self.temperature)
+                max_tokens=kwargs.get("max_tokens", self.max_tokens),
+                temperature=kwargs.get("temperature", self.temperature),
             )
-
-            response_time_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
+            response_time_ms = int(
+                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            )
             response_content = (response_data.get("content") or "").strip()
-
             if not response_content:
-                raise LLMClientError("Gemini returned an empty response. Please verify safety settings.")
-
+                raise LLMClientError("OpenAI returned an empty response")
             if session_id and db_session:
                 await self._save_chat_messages(
-                    db_session=db_session,
-                    session_id=session_id,
-                    user_message=message,
-                    assistant_message=response_content,
-                    response_time_ms=response_time_ms,
-                    model_used=response_data.get("model"),
-                    tokens_used=response_data.get("tokens_used"),
-                    metadata=response_data.get("metadata", {})
+                    db_session,
+                    session_id,
+                    message,
+                    response_content,
+                    response_time_ms,
+                    response_data.get("model"),
+                    response_data.get("tokens_used"),
+                    response_data.get("metadata", {}),
                 )
-
             if db_session:
                 await self._log_api_usage(
-                    db_session=db_session,
-                    model=response_data.get("model"),
-                    tokens_used=response_data.get("tokens_used"),
-                    response_time_ms=response_time_ms,
-                    success=True
+                    db_session,
+                    response_data.get("model"),
+                    response_data.get("tokens_used"),
+                    response_time_ms,
+                    success=True,
                 )
-
             return {
                 "response": response_content,
                 "session_id": session_id,
                 "model": response_data.get("model"),
                 "tokens_used": response_data.get("tokens_used"),
                 "response_time_ms": response_time_ms,
-                "metadata": response_data.get("metadata", {})
+                "metadata": response_data.get("metadata", {}),
             }
-
-        except Exception as e:
+        except Exception as error:
             if db_session:
                 await self._log_api_usage(
-                    db_session=db_session,
-                    error_message=str(e),
-                    response_time_ms=int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000),
-                    success=False
+                    db_session,
+                    model=model,
+                    response_time_ms=int(
+                        (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                    ),
+                    error_message=str(error),
+                    success=False,
                 )
-            logger.error(f"LLM chat failed: {str(e)}")
-            raise LLMClientError(f"Failed to get LLM response: {str(e)}")
+            logger.error(
+                "LLM chat failed provider=openai model=%s category=%s",
+                model or self.provider_client.model,
+                type(error).__name__,
+            )
+            if isinstance(error, LLMClientError):
+                raise
+            raise LLMClientError(
+                "Unexpected error while getting an OpenAI response"
+            ) from error
 
     async def stream_chat(
         self,
         message: str,
         session_id: Optional[str] = None,
         model: Optional[str] = None,
-        provider: Optional[ModelProvider] = None,  # Left for backward compatibility
+        provider: Optional[ModelProvider] = None,
         context: Optional[List[Dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
-        **kwargs
+        db_session: Optional[AsyncSession] = None,
+        **kwargs: Any,
     ) -> AsyncGenerator[str, None]:
-        """Stream chat response from Gemini."""
+        """Stream plain text chunks from the configured provider."""
+        conversation_history = context
+        if conversation_history is None and session_id and db_session:
+            conversation_history = await self._get_conversation_history(
+                db_session, session_id
+            )
         async for chunk in self.provider_client.stream_response(
             message=message,
             model=model,
-            context=context,
+            context=conversation_history,
             system_instruction=system_instruction,
-            **kwargs
+            **kwargs,
         ):
             yield chunk
 
-    async def _get_conversation_history(self, session: AsyncSession, session_id: str, limit: int = 10) -> List[Dict[str, str]]:
+    async def _get_conversation_history(
+        self, session: AsyncSession, session_id: str, limit: int = 10
+    ) -> List[Dict[str, str]]:
         try:
-            from sqlalchemy import select, desc
-            stmt = select(ChatHistory).where(ChatHistory.session_id == session_id).order_by(desc(ChatHistory.created_at)).limit(limit * 2)
+            from sqlalchemy import desc, select
+
+            stmt = (
+                select(ChatHistory)
+                .where(ChatHistory.session_id == session_id)
+                .order_by(desc(ChatHistory.created_at))
+                .limit(limit * 2)
+            )
             result = await session.execute(stmt)
             messages = result.scalars().all()
-
-            conversation = []
-            for msg in reversed(messages):
-                conversation.append({"role": "user" if msg.message_type == MessageType.USER else "model", "content": msg.content})
+            conversation = [
+                {
+                    "role": (
+                        "user" if msg.message_type == MessageType.USER else "assistant"
+                    ),
+                    "content": msg.content,
+                }
+                for msg in reversed(messages)
+            ]
             return conversation[-limit:]
-        except Exception as e:
-            logger.warning(f"Failed to get conversation history: {str(e)}")
+        except Exception as error:
+            logger.warning("Failed to get conversation history: %s", error)
             return []
 
-    async def _save_chat_messages(self, db_session: AsyncSession, session_id: str, user_message: str, assistant_message: str, response_time_ms: int, model_used: Optional[str] = None, tokens_used: Optional[int] = None, metadata: Optional[Dict[str, Any]] = None) -> None:
+    async def _save_chat_messages(
+        self,
+        db_session: AsyncSession,
+        session_id: str,
+        user_message: str,
+        assistant_message: str,
+        response_time_ms: int,
+        model_used: Optional[str] = None,
+        tokens_used: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
         try:
-            user_msg = ChatHistory(session_id=session_id, message_type=MessageType.USER, content=user_message, msg_metadata=metadata or {})
-            assistant_msg = ChatHistory(session_id=session_id, message_type=MessageType.ASSISTANT, content=assistant_message, response_time_ms=response_time_ms, tokens_used=tokens_used, model_used=model_used, msg_metadata=metadata or {})
-            db_session.add(user_msg)
-            db_session.add(assistant_msg)
-            await db_session.commit()
-        except Exception as e:
-            await db_session.rollback()
-            logger.error(f"Failed to save chat messages: {str(e)}")
-
-    async def _log_api_usage(self, db_session: AsyncSession, model: Optional[str] = None, tokens_used: Optional[int] = None, response_time_ms: int = 0, error_message: Optional[str] = None, success: bool = True) -> None:
-        try:
-            log_entry = APIUsageLog(
-                api_provider="gemini",
-                endpoint=model,
-                method="POST",
-                status_code=200 if success else 500,
-                response_time_ms=response_time_ms,
-                tokens_used=tokens_used,
-                error_message=error_message,
-                request_metadata={"model": model, "provider": "gemini"}
+            db_session.add(
+                ChatHistory(
+                    session_id=session_id,
+                    message_type=MessageType.USER,
+                    content=user_message,
+                    msg_metadata=metadata or {},
+                )
             )
-            db_session.add(log_entry)
+            db_session.add(
+                ChatHistory(
+                    session_id=session_id,
+                    message_type=MessageType.ASSISTANT,
+                    content=assistant_message,
+                    response_time_ms=response_time_ms,
+                    tokens_used=tokens_used,
+                    model_used=model_used,
+                    msg_metadata=metadata or {},
+                )
+            )
             await db_session.commit()
-        except Exception as e:
-            logger.warning(f"Failed to log API usage: {str(e)}")
+        except Exception as error:
+            await db_session.rollback()
+            logger.error("Failed to save chat messages: %s", error)
+
+    async def _log_api_usage(
+        self,
+        db_session: AsyncSession,
+        model: Optional[str] = None,
+        tokens_used: Optional[int] = None,
+        response_time_ms: int = 0,
+        error_message: Optional[str] = None,
+        success: bool = True,
+    ) -> None:
+        try:
+            db_session.add(
+                APIUsageLog(
+                    api_provider="openai",
+                    endpoint=model,
+                    method="POST",
+                    status_code=200 if success else 500,
+                    response_time_ms=response_time_ms,
+                    tokens_used=tokens_used,
+                    error_message=error_message,
+                    request_metadata={"model": model, "provider": "openai"},
+                )
+            )
+            await db_session.commit()
+        except Exception as error:
+            logger.warning("Failed to log API usage: %s", error)
 
 
-# Global lazy instance
 _llm_client_instance: Optional[LLMClient] = None
 
 

@@ -27,7 +27,7 @@ async def upload_cv(
     
     - Accepts PDF files only
     - Extracts text content
-    - Uses Gemini AI to parse structured data
+    - Uses OpenAI to parse structured data
     - Stores in database
     """
     # Validate file type
