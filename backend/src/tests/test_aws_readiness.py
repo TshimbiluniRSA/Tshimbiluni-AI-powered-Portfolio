@@ -70,7 +70,7 @@ class FakeS3:
 
 def test_cv_download_presigned(monkeypatch):
     monkeypatch.setenv("S3_PRESIGNED_URL_EXPIRY_SECONDS", "300")
-    app.dependency_overrides[storage] = lambda: FakeS3()
+    app.dependency_overrides[storage] = FakeS3
     try:
         response = TestClient(app).get("/cv/download")
         assert response.status_code == 200
