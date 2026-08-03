@@ -1,7 +1,7 @@
 """initial schema
 
 Revision ID: 20260630_0001
-Revises: 
+Revises:
 Create Date: 2026-06-30 00:00:00.000000
 """
 
@@ -32,15 +32,32 @@ def upgrade() -> None:
         sa.Column("blog", sa.String(length=500), nullable=True),
         sa.Column("twitter_username", sa.String(length=15), nullable=True),
         sa.Column("hireable", sa.Boolean(), nullable=True),
-        sa.Column("last_fetched_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.Column(
+            "last_fetched_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=True,
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("username"),
     )
     op.create_index("idx_github_followers", "github_profiles", ["followers"])
     op.create_index("idx_github_last_fetched", "github_profiles", ["last_fetched_at"])
     op.create_index("idx_github_public_repos", "github_profiles", ["public_repos"])
-    op.create_index(op.f("ix_github_profiles_username"), "github_profiles", ["username"])
+    op.create_index(
+        op.f("ix_github_profiles_username"), "github_profiles", ["username"]
+    )
 
     op.create_table(
         "api_usage_logs",
@@ -54,12 +71,24 @@ def upgrade() -> None:
         sa.Column("cost_usd", sa.Float(), nullable=True),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("request_metadata", sa.JSON(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("idx_api_cost", "api_usage_logs", ["cost_usd"])
-    op.create_index("idx_api_provider_created", "api_usage_logs", ["api_provider", "created_at"])
+    op.create_index(
+        "idx_api_provider_created", "api_usage_logs", ["api_provider", "created_at"]
+    )
     op.create_index("idx_api_status", "api_usage_logs", ["status_code"])
 
     op.create_table(
@@ -73,12 +102,24 @@ def upgrade() -> None:
         sa.Column("tokens_used", sa.Integer(), nullable=True),
         sa.Column("model_used", sa.String(length=100), nullable=True),
         sa.Column("rating", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("idx_chat_rating", "chat_history", ["rating"])
-    op.create_index("idx_chat_session_created", "chat_history", ["session_id", "created_at"])
+    op.create_index(
+        "idx_chat_session_created", "chat_history", ["session_id", "created_at"]
+    )
     op.create_index("idx_chat_type", "chat_history", ["message_type"])
     op.create_index(op.f("ix_chat_history_session_id"), "chat_history", ["session_id"])
 
@@ -93,8 +134,18 @@ def upgrade() -> None:
         sa.Column("is_active", sa.Boolean(), nullable=True),
         sa.Column("download_count", sa.Integer(), nullable=True),
         sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("idx_cv_active", "cv_metadata", ["is_active"])
@@ -119,11 +170,26 @@ def upgrade() -> None:
         sa.Column("parsing_status", sa.String(length=20), nullable=True),
         sa.Column("parsing_error", sa.Text(), nullable=True),
         sa.Column("ai_model_used", sa.String(length=50), nullable=True),
-        sa.Column("uploaded_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=True),
+        sa.Column(
+            "uploaded_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=True,
+        ),
         sa.Column("parsed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("idx_cv_user_active", "cvs", ["user_id", "is_active"])
@@ -140,16 +206,37 @@ def upgrade() -> None:
         sa.Column("industry", sa.String(length=255), nullable=True),
         sa.Column("connections_count", sa.String(length=50), nullable=True),
         sa.Column("profile_image_url", sa.String(length=500), nullable=True),
-        sa.Column("last_scraped_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=True),
+        sa.Column(
+            "last_scraped_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=True,
+        ),
         sa.Column("scraping_successful", sa.Boolean(), nullable=True),
         sa.Column("scraping_error", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("username"),
     )
-    op.create_index("idx_linkedin_last_scraped", "linkedin_profiles", ["last_scraped_at"])
-    op.create_index("idx_linkedin_successful", "linkedin_profiles", ["scraping_successful"])
-    op.create_index(op.f("ix_linkedin_profiles_username"), "linkedin_profiles", ["username"])
+    op.create_index(
+        "idx_linkedin_last_scraped", "linkedin_profiles", ["last_scraped_at"]
+    )
+    op.create_index(
+        "idx_linkedin_successful", "linkedin_profiles", ["scraping_successful"]
+    )
+    op.create_index(
+        op.f("ix_linkedin_profiles_username"), "linkedin_profiles", ["username"]
+    )
 
     op.create_table(
         "github_repositories",
@@ -175,26 +262,60 @@ def upgrade() -> None:
         sa.Column("github_created_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("github_updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("github_pushed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("last_synced_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=True),
+        sa.Column(
+            "last_synced_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=True,
+        ),
         sa.Column("is_featured", sa.Boolean(), nullable=True),
         sa.Column("display_order", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["owner_username"], ["github_profiles.username"]),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("idx_repo_featured", "github_repositories", ["is_featured", "display_order"])
-    op.create_index("idx_repo_owner_name", "github_repositories", ["owner_username", "name"])
+    op.create_index(
+        "idx_repo_featured", "github_repositories", ["is_featured", "display_order"]
+    )
+    op.create_index(
+        "idx_repo_owner_name", "github_repositories", ["owner_username", "name"]
+    )
     op.create_index("idx_repo_stars", "github_repositories", ["stargazers_count"])
-    op.create_index(op.f("ix_github_repositories_github_id"), "github_repositories", ["github_id"], unique=True)
-    op.create_index(op.f("ix_github_repositories_name"), "github_repositories", ["name"])
-    op.create_index(op.f("ix_github_repositories_owner_username"), "github_repositories", ["owner_username"])
+    op.create_index(
+        op.f("ix_github_repositories_github_id"),
+        "github_repositories",
+        ["github_id"],
+        unique=True,
+    )
+    op.create_index(
+        op.f("ix_github_repositories_name"), "github_repositories", ["name"]
+    )
+    op.create_index(
+        op.f("ix_github_repositories_owner_username"),
+        "github_repositories",
+        ["owner_username"],
+    )
 
 
 def downgrade() -> None:
-    op.drop_index(op.f("ix_github_repositories_owner_username"), table_name="github_repositories")
+    op.drop_index(
+        op.f("ix_github_repositories_owner_username"), table_name="github_repositories"
+    )
     op.drop_index(op.f("ix_github_repositories_name"), table_name="github_repositories")
-    op.drop_index(op.f("ix_github_repositories_github_id"), table_name="github_repositories")
+    op.drop_index(
+        op.f("ix_github_repositories_github_id"), table_name="github_repositories"
+    )
     op.drop_index("idx_repo_stars", table_name="github_repositories")
     op.drop_index("idx_repo_owner_name", table_name="github_repositories")
     op.drop_index("idx_repo_featured", table_name="github_repositories")

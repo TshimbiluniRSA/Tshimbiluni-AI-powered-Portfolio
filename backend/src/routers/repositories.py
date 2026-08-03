@@ -54,9 +54,14 @@ async def get_featured_repositories(
 ):
     """Get featured repositories for portfolio."""
     portfolio_username = os.getenv("PORTFOLIO_GITHUB_USERNAME", "TshimbiluniRSA")
-    featured_stmt = select(GitHubRepository).where(
-        GitHubRepository.is_featured
-    ).order_by(GitHubRepository.display_order.asc(), desc(GitHubRepository.stargazers_count))
+    featured_stmt = (
+        select(GitHubRepository)
+        .where(GitHubRepository.is_featured)
+        .order_by(
+            GitHubRepository.display_order.asc(),
+            desc(GitHubRepository.stargazers_count),
+        )
+    )
 
     try:
         result = await session.execute(featured_stmt)
@@ -70,7 +75,9 @@ async def get_featured_repositories(
                 repos = result.scalars().all()
             except Exception as exc:
                 await session.rollback()
-                logger.warning("Failed to auto-sync featured repositories: %s", str(exc))
+                logger.warning(
+                    "Failed to auto-sync featured repositories: %s", str(exc)
+                )
 
         # Fallback: if nothing is manually featured yet, return top cached repositories.
         if not repos:
@@ -82,7 +89,10 @@ async def get_featured_repositories(
                     GitHubRepository.is_archived.is_(False),
                     GitHubRepository.is_fork.is_(False),
                 )
-                .order_by(desc(GitHubRepository.stargazers_count), desc(GitHubRepository.github_pushed_at))
+                .order_by(
+                    desc(GitHubRepository.stargazers_count),
+                    desc(GitHubRepository.github_pushed_at),
+                )
                 .limit(6)
             )
             fallback_result = await session.execute(fallback_stmt)
@@ -92,7 +102,10 @@ async def get_featured_repositories(
             return [repository_response(repo) for repo in repos]
     except Exception as exc:
         await session.rollback()
-        logger.warning("Repository database lookup failed, using live GitHub fallback: %s", str(exc))
+        logger.warning(
+            "Repository database lookup failed, using live GitHub fallback: %s",
+            str(exc),
+        )
 
     # Last-resort live GitHub fallback keeps the Projects section working even
     # before repository rows have been migrated or cached in the database.
@@ -133,9 +146,13 @@ async def get_user_repositories(
                         str(exc),
                     )
 
-        stmt = select(GitHubRepository).where(
-            GitHubRepository.owner_username == username.lower()
-        ).order_by(desc(GitHubRepository.stargazers_count)).offset(offset).limit(size)
+        stmt = (
+            select(GitHubRepository)
+            .where(GitHubRepository.owner_username == username.lower())
+            .order_by(desc(GitHubRepository.stargazers_count))
+            .offset(offset)
+            .limit(size)
+        )
 
         result = await session.execute(stmt)
         repos = result.scalars().all()
