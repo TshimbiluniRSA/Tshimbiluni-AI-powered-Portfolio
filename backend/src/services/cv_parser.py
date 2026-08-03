@@ -34,11 +34,15 @@ def _truncate_cv_text(text: str, max_chars: int = 6000) -> str:
         len(text),
         max_chars,
     )
-    return truncated + "\n\n[CV text truncated at extraction limit — extract only what is visible above]"
+    return (
+        truncated
+        + "\n\n[CV text truncated at extraction limit — extract only what is visible above]"
+    )
 
 
 class CVParserError(Exception):
     """Custom exception for CV parsing errors."""
+
     pass
 
 
@@ -56,16 +60,15 @@ async def extract_text_from_pdf(file_path: Path) -> str:
 
 
 async def parse_cv_with_ai(
-    cv_text: str,
-    session: Optional[AsyncSession] = None
+    cv_text: str, session: Optional[AsyncSession] = None
 ) -> Dict[str, Any]:
     """
     Use OpenAI to parse CV and extract structured data.
-    
+
     Args:
         cv_text: Raw text extracted from CV
         session: Database session for API logging
-        
+
     Returns:
         Dict with parsed CV data
     """
@@ -108,23 +111,23 @@ Only return the JSON object, no other text.
 CV TEXT:
 {cv_text}
 """
-    
+
     try:
         # Use the same OpenAI client as the portfolio chat.
         llm_client = get_llm_client()
-        
+
         # Call AI with higher token limit for CV parsing
         response = await llm_client.chat(
             message=prompt,
             provider=ModelProvider.OPENAI,
             db_session=session,
             max_tokens=4096,
-            temperature=0.3  # Lower temperature for more accurate extraction
+            temperature=0.3,  # Lower temperature for more accurate extraction
         )
-        
+
         # Parse JSON response
         parsed_data = json.loads(response["response"])
-        
+
         return {
             "summary": parsed_data.get("summary", ""),
             "skills": parsed_data.get("skills", []),
@@ -134,7 +137,7 @@ CV TEXT:
             "languages_spoken": parsed_data.get("languages", []),
             "ai_model_used": response.get("model", "gpt-5-mini"),
         }
-        
+
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse AI response as JSON: {e}")
         # Return basic extraction
@@ -157,18 +160,18 @@ async def save_cv(
     file_path: Path,
     filename: str,
     file_size: int,
-    user_id: str = "tshimbiluni"
+    user_id: str = "tshimbiluni",
 ) -> CV:
     """
     Save CV file and parse it with AI.
-    
+
     Args:
         session: Database session
         file_path: Path to saved CV
         filename: Original filename
         file_size: File size in bytes
         user_id: User identifier
-        
+
     Returns:
         Saved CV record
     """
@@ -177,11 +180,11 @@ async def save_cv(
         await session.execute(
             update(CV).where(CV.user_id == user_id).values(is_active=False)
         )
-        
+
         # Extract text from PDF
         logger.info(f"Extracting text from {filename}")
         cv_text = await extract_text_from_pdf(file_path)
-        
+
         # Create CV record with pending status
         cv_record = CV(
             user_id=user_id,
@@ -191,17 +194,17 @@ async def save_cv(
             mime_type="application/pdf",
             full_text=cv_text,
             parsing_status="pending",
-            is_active=True
+            is_active=True,
         )
         session.add(cv_record)
         await session.commit()
         await session.refresh(cv_record)
-        
+
         # Parse with AI
         logger.info(f"Parsing CV with AI for {filename}")
         try:
             parsed_data = await parse_cv_with_ai(cv_text, session)
-            
+
             # Update CV record with parsed data
             cv_record.summary = parsed_data["summary"]
             cv_record.skills = parsed_data["skills"]
@@ -212,24 +215,26 @@ async def save_cv(
             cv_record.ai_model_used = parsed_data["ai_model_used"]
             cv_record.parsing_status = "success"
             cv_record.parsed_at = datetime.now(timezone.utc)
-            
+
         except Exception as e:
             cv_record.parsing_status = "failed"
             cv_record.parsing_error = str(e)
             logger.error(f"CV parsing failed: {e}")
-        
+
         await session.commit()
         await session.refresh(cv_record)
-        
+
         logger.info(f"CV saved and parsed: {filename}")
         return cv_record
-        
+
     except Exception as e:
         await session.rollback()
         raise CVParserError(f"Failed to save CV: {str(e)}")
 
 
-async def get_active_cv(session: AsyncSession, user_id: str = "tshimbiluni") -> Optional[CV]:
+async def get_active_cv(
+    session: AsyncSession, user_id: str = "tshimbiluni"
+) -> Optional[CV]:
     """Get the currently active CV for a user."""
     stmt = select(CV).where(CV.user_id == user_id, CV.is_active)
     result = await session.execute(stmt)

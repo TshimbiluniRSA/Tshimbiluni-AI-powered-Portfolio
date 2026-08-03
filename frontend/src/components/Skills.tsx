@@ -4,7 +4,7 @@ import { useInView } from '../hooks/useInView';
 const skillCategories = [
   { icon:'▣', title:'Frontend Engineering', skills:['React','TypeScript','HTML','CSS','Vite','Responsive UI','Component-based architecture'] },
   { icon:'⚙', title:'Backend Engineering', skills:['Python','FastAPI','Django / DRF','REST APIs','PostgreSQL','SQLAlchemy','API integrations'] },
-  { icon:'◇', title:'AI and Automation', skills:['LLM integrations','OpenAI','Gemini','Hugging Face','NLP','Prompt engineering','Document AI workflows','Classification and extraction pipelines'] },
+  { icon:'◇', title:'AI and Automation', skills:['LLM integrations','OpenAI','NLP','Prompt engineering','Document AI workflows','Classification and extraction pipelines'] },
   { icon:'↗', title:'DevOps and Delivery', skills:['Docker','Git','GitHub Actions / CI/CD','Linux','Render','Cloud deployments','Environment configuration'] },
   { icon:'✓', title:'Engineering Practices', skills:['Debugging production issues','Clean service-layer design','Background jobs','Database design','Testing mindset','API-first development'] },
 ];
