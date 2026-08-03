@@ -1,14 +1,13 @@
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any
+from typing import Optional
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 from sqlalchemy import select, desc, func, text
-from db.database import get_async_db, get_db
+from db.database import get_async_db
 from db.models import ChatHistory
 from schemas import (
     ChatRequest,
@@ -16,7 +15,7 @@ from schemas import (
     ChatSessionResponse,
     ErrorResponse,
     PaginatedResponse,
-    HealthCheckResponse
+    HealthCheckResponse,
 )
 from services.llm_client import get_llm_client, LLMClientError, ModelProvider
 from services.portfolio_context import build_system_prompt
@@ -53,7 +52,7 @@ router = APIRouter(
     responses={
         400: {"model": ErrorResponse, "description": "Bad Request"},
         500: {"model": ErrorResponse, "description": "Internal Server Error"},
-    }
+    },
 )
 
 
@@ -65,25 +64,25 @@ router = APIRouter(
     responses={
         200: {"description": "Successful response from AI"},
         422: {"description": "Validation Error"},
-        500: {"description": "AI service error"}
-    }
+        500: {"description": "AI service error"},
+    },
 )
 async def send_message(
     request: ChatRequest,
     background_tasks: BackgroundTasks,
-    session: AsyncSession = Depends(get_async_db)
+    session: AsyncSession = Depends(get_async_db),
 ) -> ChatMessageResponse:
     """Send a message to the AI assistant."""
     try:
         # Generate session ID if not provided
         session_id = request.session_id or str(uuid.uuid4())
-        
+
         logger.info(f"Processing chat message for session: {session_id[:8]}...")
-        
+
         # Determine provider and model
         selected_model = _normalize_requested_model(request.model)
         provider = ModelProvider.OPENAI
-        
+
         # Build portfolio system prompt — tells the LLM who it is representing
         system_prompt = await build_system_prompt(db_session=session)
 
@@ -96,9 +95,9 @@ async def send_message(
             provider=provider,
             system_instruction=system_prompt,
             db_session=session,
-            **request.metadata or {}
+            **request.metadata or {},
         )
-        
+
         # Return response
         return ChatMessageResponse(
             id=0,  # This will be set by the database
@@ -110,9 +109,9 @@ async def send_message(
             response_time_ms=response_data.get("response_time_ms"),
             tokens_used=response_data.get("tokens_used"),
             model_used=response_data.get("model"),
-            metadata=response_data.get("metadata", {})
+            metadata=response_data.get("metadata", {}),
         )
-        
+
     except LLMClientError as e:
         logger.error(f"LLM client error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"AI service error: {str(e)}")
@@ -127,23 +126,22 @@ async def send_message(
     description="Send a message and receive a streaming response",
     responses={
         200: {"description": "Streaming response from AI"},
-        422: {"description": "Validation Error"}
-    }
+        422: {"description": "Validation Error"},
+    },
 )
 async def stream_message(
-    request: ChatRequest,
-    session: AsyncSession = Depends(get_async_db)
+    request: ChatRequest, session: AsyncSession = Depends(get_async_db)
 ):
     """Send a message and receive a streaming response."""
     try:
         # Generate session ID if not provided
         session_id = request.session_id or str(uuid.uuid4())
-        
+
         logger.info(f"Starting streaming chat for session: {session_id[:8]}...")
-        
+
         selected_model = _normalize_requested_model(request.model)
         provider = ModelProvider.OPENAI
-        
+
         async def generate_stream():
             """Generate streaming response."""
             try:
@@ -157,28 +155,28 @@ async def stream_message(
                     provider=provider,
                     system_instruction=system_prompt,
                     db_session=session,
-                    **request.metadata or {}
+                    **request.metadata or {},
                 ):
                     full_response += chunk
                     yield f"data: {chunk}\n\n"
-                
+
                 # Send completion signal
                 yield "data: [DONE]\n\n"
-                
+
             except Exception as e:
                 logger.error(f"Streaming error: {str(e)}")
                 yield f"data: ERROR: {str(e)}\n\n"
-        
+
         return StreamingResponse(
             generate_stream(),
             media_type="text/plain",
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
-                "X-Accel-Buffering": "no" 
-            }
+                "X-Accel-Buffering": "no",
+            },
         )
-        
+
     except Exception as e:
         logger.error(f"Stream setup error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -188,26 +186,29 @@ async def stream_message(
     "/sessions/{session_id}",
     response_model=ChatSessionResponse,
     summary="Get chat session",
-    description="Retrieve a complete chat session with all messages"
+    description="Retrieve a complete chat session with all messages",
 )
 async def get_chat_session(
     session_id: str,
     limit: int = Query(50, ge=1, le=100, description="Maximum number of messages"),
-    session: AsyncSession = Depends(get_async_db)
+    session: AsyncSession = Depends(get_async_db),
 ) -> ChatSessionResponse:
     """Get a chat session with all its messages."""
     try:
         # Get messages for the session
-        stmt = select(ChatHistory).where(
-            ChatHistory.session_id == session_id
-        ).order_by(desc(ChatHistory.created_at)).limit(limit)
-        
+        stmt = (
+            select(ChatHistory)
+            .where(ChatHistory.session_id == session_id)
+            .order_by(desc(ChatHistory.created_at))
+            .limit(limit)
+        )
+
         result = await session.execute(stmt)
         messages = result.scalars().all()
-        
+
         if not messages:
             raise HTTPException(status_code=404, detail="Session not found")
-        
+
         # Convert to response format
         message_responses = [
             ChatMessageResponse(
@@ -221,19 +222,19 @@ async def get_chat_session(
                 tokens_used=msg.tokens_used,
                 model_used=msg.model_used,
                 rating=msg.rating,
-                metadata=msg.msg_metadata or {}
+                metadata=msg.msg_metadata or {},
             )
-            for msg in reversed(messages) 
+            for msg in reversed(messages)
         ]
-        
+
         return ChatSessionResponse(
             session_id=session_id,
             messages=message_responses,
             message_count=len(message_responses),
-            created_at=messages[-1].created_at,  
-            last_activity=messages[0].created_at   
+            created_at=messages[-1].created_at,
+            last_activity=messages[0].created_at,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -245,43 +246,47 @@ async def get_chat_session(
     "/sessions",
     response_model=PaginatedResponse,
     summary="List chat sessions",
-    description="Get a paginated list of chat sessions"
+    description="Get a paginated list of chat sessions",
 )
 async def list_chat_sessions(
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(20, ge=1, le=100, description="Items per page"),
-    session: AsyncSession = Depends(get_async_db)
+    session: AsyncSession = Depends(get_async_db),
 ) -> PaginatedResponse:
     """Get a paginated list of chat sessions."""
     try:
         offset = (page - 1) * size
         # Get unique sessions with their latest activity
-        stmt = select(
-            ChatHistory.session_id,
-            func.max(ChatHistory.created_at).label('last_activity'),
-            func.count(ChatHistory.id).label('message_count')
-        ).group_by(ChatHistory.session_id).order_by(
-            desc('last_activity')
-        ).offset(offset).limit(size)
-        
+        stmt = (
+            select(
+                ChatHistory.session_id,
+                func.max(ChatHistory.created_at).label("last_activity"),
+                func.count(ChatHistory.id).label("message_count"),
+            )
+            .group_by(ChatHistory.session_id)
+            .order_by(desc("last_activity"))
+            .offset(offset)
+            .limit(size)
+        )
+
         result = await session.execute(stmt)
         sessions = result.all()
-        
+
         # Get total count
         count_stmt = select(func.count(func.distinct(ChatHistory.session_id)))
         count_result = await session.execute(count_stmt)
         total = count_result.scalar() or 0
-        
+
         # Format response
         session_items = [
             {
                 "session_id": s.session_id,
                 "last_activity": s.last_activity,
-                "message_count": s.message_count
+                "message_count": s.message_count,
             }
             for s in sessions
         ]
-        
+
         return PaginatedResponse(
             items=session_items,
             total=total,
@@ -289,9 +294,9 @@ async def list_chat_sessions(
             size=size,
             pages=(total + size - 1) // size,
             has_next=page * size < total,
-            has_prev=page > 1
+            has_prev=page > 1,
         )
-        
+
     except Exception as e:
         logger.error(f"Error listing chat sessions: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to list sessions")
@@ -300,12 +305,12 @@ async def list_chat_sessions(
 @router.post(
     "/sessions/{session_id}/rate",
     summary="Rate a message",
-    description="Rate an assistant message in a conversation"
+    description="Rate an assistant message in a conversation",
 )
 async def rate_message(
     session_id: str,
     payload: MessageRatingRequest,
-    session: AsyncSession = Depends(get_async_db)
+    session: AsyncSession = Depends(get_async_db),
 ):
     """Rate an assistant message."""
     try:
@@ -313,27 +318,27 @@ async def rate_message(
         stmt = select(ChatHistory).where(
             ChatHistory.session_id == session_id,
             ChatHistory.id == payload.message_id,
-            ChatHistory.message_type == "assistant"
+            ChatHistory.message_type == "assistant",
         )
-        
+
         result = await session.execute(stmt)
         message = result.scalar_one_or_none()
-        
+
         if not message:
             raise HTTPException(status_code=404, detail="Message not found")
-        
+
         # Update rating
         message.rating = payload.rating
         await session.commit()
-        
+
         logger.info(
             "Message %s rated %s stars",
             str(payload.message_id).replace("\r\n", "").replace("\n", ""),
-            str(payload.rating).replace("\r\n", "").replace("\n", "")
+            str(payload.rating).replace("\r\n", "").replace("\n", ""),
         )
-        
+
         return {"message": "Rating saved successfully", "rating": payload.rating}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -344,29 +349,28 @@ async def rate_message(
 @router.delete(
     "/sessions/{session_id}",
     summary="Delete chat session",
-    description="Delete a chat session and all its messages"
+    description="Delete a chat session and all its messages",
 )
 async def delete_chat_session(
-    session_id: str,
-    session: AsyncSession = Depends(get_async_db)
+    session_id: str, session: AsyncSession = Depends(get_async_db)
 ):
     """Delete a chat session and all its messages."""
     try:
         # Delete all messages in the session
         from sqlalchemy import delete
-        
+
         stmt = delete(ChatHistory).where(ChatHistory.session_id == session_id)
         result = await session.execute(stmt)
-        
+
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Session not found")
-        
+
         await session.commit()
-        
+
         logger.info(f"Deleted chat session: {session_id}")
-        
+
         return {"message": f"Session {session_id} deleted successfully"}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -379,10 +383,10 @@ async def delete_chat_session(
     "/health",
     response_model=HealthCheckResponse,
     summary="Chat service health check",
-    description="Check the health of the chat service and LLM providers"
+    description="Check the health of the chat service and LLM providers",
 )
 async def health_check(
-    session: AsyncSession = Depends(get_async_db)
+    session: AsyncSession = Depends(get_async_db),
 ) -> HealthCheckResponse:
     """Check the health of the chat service."""
     try:
@@ -392,18 +396,16 @@ async def health_check(
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
         db_healthy = False
-    
+
     # Check LLM providers (simplified)
     llm_client = get_llm_client()
-    external_apis = {
-        "openai": bool(llm_client.provider_client.api_key)
-    }
-    
+    external_apis = {"openai": bool(llm_client.provider_client.api_key)}
+
     return HealthCheckResponse(
         status="healthy" if db_healthy else "unhealthy",
         timestamp=datetime.now(timezone.utc),
         database=db_healthy,
-        external_apis=external_apis
+        external_apis=external_apis,
     )
 
 
@@ -412,32 +414,32 @@ async def health_check(
     "",
     summary="Simple chat (deprecated)",
     description="Simple chat endpoint for backward compatibility",
-    deprecated=True
+    deprecated=True,
 )
 async def simple_chat(
     question: str = Query(..., description="Ask me anything"),
-    session: AsyncSession = Depends(get_async_db)
+    session: AsyncSession = Depends(get_async_db),
 ):
     """Simple chat endpoint for backward compatibility."""
     try:
         logger.warning("Using deprecated chat endpoint")
-        
+
         llm_client = get_llm_client()
         system_prompt = await build_system_prompt(db_session=session)
         response_data = await llm_client.chat(
             message=question,
             provider=None,
             system_instruction=system_prompt,
-            db_session=session
+            db_session=session,
         )
-        
+
         return {
             "question": question,
             "answer": response_data["response"],
             "session_id": response_data.get("session_id"),
-            "tokens_used": response_data.get("tokens_used")
+            "tokens_used": response_data.get("tokens_used"),
         }
-        
+
     except LLMClientError as e:
         logger.error(f"LLM error in simple chat: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

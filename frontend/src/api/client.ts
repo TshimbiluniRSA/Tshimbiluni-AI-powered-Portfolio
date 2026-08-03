@@ -93,16 +93,11 @@ export interface GitHubProfile {
   is_data_stale: boolean;
 }
 
-export interface LinkedInProfile {
-  profile_url: string;
-  full_name?: string;
-  headline?: string;
-  location?: string;
-  about?: string;
-  profile_image_url?: string;
-  connections_count?: number;
-  created_at: string;
-  updated_at: string;
+export interface GitHubStats {
+  username: string; profile: { name?: string; avatar_url?: string; profile_url?: string; followers: number; following: number; public_repositories: number };
+  repository_stats: { total_stars:number; total_forks:number; total_watchers:number; total_open_issues:number; total_repository_size_kb:number };
+  contributions: { total:number; commits:number; pull_requests:number; issues:number; pull_request_reviews:number; period_start?:string; period_end?:string };
+  top_languages: Array<{name:string; bytes:number; percentage:number}>; recent_repositories: Array<{name:string; url?:string; updated_at?:string; stars:number; forks:number}>; last_synced_at:string;
 }
 
 // API Methods
@@ -142,41 +137,11 @@ export const api = {
     },
   },
   
-  // GitHub endpoints
+  // Cached portfolio-owner statistics (the browser never receives a GitHub token)
   github: {
-    sync: async (username: string) => {
-      const response = await apiClient.post('/github/sync', { username });
-      return response.data;
-    },
-    
-    getProfile: async (username: string): Promise<GitHubProfile> => {
-      const response = await apiClient.get(`/github/profiles/${username}`);
-      return response.data;
-    },
-    
-    listProfiles: async (page: number = 1, size: number = 20) => {
-      const response = await apiClient.get('/github/profiles', {
-        params: { page, size },
-      });
-      return response.data;
-    },
+    getStats: async (): Promise<GitHubStats> => (await apiClient.get('/github/stats')).data,
   },
-  
-  // LinkedIn endpoints
-  linkedin: {
-    sync: async (profileUrl: string) => {
-      const response = await apiClient.post('/linkedin/sync', {
-        profile_url: profileUrl,
-      });
-      return response.data;
-    },
-    
-    getProfile: async (username: string): Promise<LinkedInProfile> => {
-      const response = await apiClient.get(`/linkedin/profiles/${encodeURIComponent(username)}`);
-      return response.data;
-    },
-  },
-  
+
   // Health check
   health: async () => {
     const response = await apiClient.get('/chat/health');
@@ -186,21 +151,12 @@ export const api = {
   // CV endpoints
   cv: {
     getInfo: async () => {
-      const response = await apiClient.get('/api/cv/info');
+      const response = await apiClient.get('/cv/info');
       return response.data;
     },
-    download: async () => {
-      try {
-        const downloadUrl = `${API_URL}/api/cv/download`;
-        const result = window.open(downloadUrl, '_blank');
-        if (!result) {
-          // Fallback if popup blocker prevented the window from opening
-          window.location.href = downloadUrl;
-        }
-      } catch (error) {
-        console.error('Failed to download CV:', error);
-        throw error;
-      }
+    download: async (): Promise<{download_url:string; expires_in:number; filename:string}> => {
+      const response = await apiClient.get('/cv/download');
+      return response.data;
     },
   },
   

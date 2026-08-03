@@ -66,7 +66,7 @@ Frontend:
 - component-based frontend development
 
 AI and automation:
-- Gemini API
+- OpenAI Responses API
 - OpenAI API
 - Azure OpenAI
 - LLM integrations
@@ -153,7 +153,9 @@ async def build_system_prompt(db_session: Optional[AsyncSession] = None) -> str:
                         company = exp.get("company", "")
                         duration = exp.get("duration", "")
                         description = exp.get("description", "")
-                        exp_lines.append(f"  - {title} at {company} ({duration}): {description}")
+                        exp_lines.append(
+                            f"  - {title} at {company} ({duration}): {description}"
+                        )
                     if exp_lines:
                         parts.append("Work experience:\n" + "\n".join(exp_lines))
 
@@ -171,7 +173,9 @@ async def build_system_prompt(db_session: Optional[AsyncSession] = None) -> str:
                     parts.append(f"Certifications: {', '.join(cv.certifications)}")
 
                 if parts:
-                    cv_section = "\n\nAdditional detail from uploaded CV:\n" + "\n".join(parts)
+                    cv_section = (
+                        "\n\nAdditional detail from uploaded CV:\n" + "\n".join(parts)
+                    )
 
         except Exception as e:
             # Non-fatal — chat works without CV data.
@@ -199,6 +203,6 @@ Response rules:
 - When explaining skills, connect tools to practical work where possible.
 - When explaining projects, describe what problem the project solves, what technologies were used, and what it demonstrates.
 - For off-topic requests, politely redirect to Tshimbiluni's work, projects, skills, or contact options.
-- If asked for contact details, direct the visitor to the portfolio contact section or LinkedIn.
+- If asked for contact details, direct the visitor to the portfolio contact section.
 """
     return system_prompt

@@ -6,6 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Get database URL from environment or use default
@@ -45,9 +46,7 @@ if is_sqlite:
 
 # Create async engine with proper configuration
 async_engine = create_async_engine(
-    ASYNC_DATABASE_URL,
-    connect_args=async_connect_args,
-    **engine_kwargs
+    ASYNC_DATABASE_URL, connect_args=async_connect_args, **engine_kwargs
 )
 
 # Create sync engine for migrations and initial setup
@@ -61,6 +60,7 @@ sync_engine = create_engine(
 
 # Enable WAL mode for better concurrent access (SQLite only)
 if is_sqlite:
+
     @event.listens_for(sync_engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         """Set SQLite pragmas for better performance and concurrent access."""
@@ -71,6 +71,7 @@ if is_sqlite:
         cursor.execute("PRAGMA temp_store=MEMORY")
         cursor.execute("PRAGMA mmap_size=268435456")  # 256MB
         cursor.close()
+
 
 # Async session factory
 AsyncSessionLocal = async_sessionmaker(
@@ -91,6 +92,7 @@ SessionLocal = sessionmaker(
 # Base class for all models
 Base = declarative_base()
 
+
 # Dependency to get async database session
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     """Async dependency to get database session."""
@@ -103,9 +105,10 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
         finally:
             await session.close()
 
+
 # Dependency to get sync database session (for backwards compatibility)
 def get_db():
-    """ Sync dependency to get database session. """
+    """Sync dependency to get database session."""
     db = SessionLocal()
     try:
         yield db
@@ -114,6 +117,7 @@ def get_db():
         raise
     finally:
         db.close()
+
 
 # Database initialization
 async def init_db() -> None:
@@ -126,10 +130,12 @@ async def init_db() -> None:
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+
 # Database cleanup
 async def close_db() -> None:
     """Close the database connection pool."""
     await async_engine.dispose()
+
 
 # Health check function
 async def check_db_health() -> bool:

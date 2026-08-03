@@ -7,35 +7,39 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from db.database import check_db_health, init_db, close_db
-from routers import github, linkedin, chat, repositories, cv
+from routers import github, chat, repositories, cv
 
 # Configure logging
 logging.basicConfig(
     stream=sys.stdout,
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger("main")
 
 # FastAPI app
 app = FastAPI(
     title="Tshimbiluni AI-powered Portfolio",
-    description="Portfolio platform with AI-powered chat, GitHub/LinkedIn sync, and more.",
+    description="Portfolio API with OpenAI chat, CV storage, and GitHub statistics.",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
 )
 
 # CORS configuration
-frontend_url = os.getenv(
-    "FRONTEND_URL",
-    "https://tshimbiluni-ai-powered-portfolio-1.onrender.com",
-).rstrip("/")
+default_origins = (
+    "http://localhost:5173,https://tshimbiluni-ai-powered-portfolio-1.onrender.com"
+)
+origins = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv("CORS_ORIGINS", default_origins).split(",")
+    if origin.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,10 +47,10 @@ app.add_middleware(
 
 # Routers
 app.include_router(github.router)
-app.include_router(linkedin.router)
 app.include_router(chat.router)
 app.include_router(repositories.router)
 app.include_router(cv.router)
+
 
 @app.get("/health")
 async def health():
@@ -71,12 +75,14 @@ async def ready():
 async def root():
     return RedirectResponse(url="/docs")
 
+
 # Startup event
 @app.on_event("startup")
 async def on_startup():
     logger.info("Starting Tshimbiluni AI-powered Portfolio app...")
     await init_db()
     logger.info("Database initialized.")
+
 
 # Shutdown event
 @app.on_event("shutdown")
