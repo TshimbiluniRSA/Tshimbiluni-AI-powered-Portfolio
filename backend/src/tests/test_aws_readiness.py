@@ -46,6 +46,7 @@ async def test_repository_aggregation_and_forks_excluded(monkeypatch):
             ]
         if path.endswith("/languages"):
             return {"Python": 75, "TypeScript": 25}
+        return None
 
     monkeypatch.setattr(service, "_get", get)
     data = await service.collect("me")
