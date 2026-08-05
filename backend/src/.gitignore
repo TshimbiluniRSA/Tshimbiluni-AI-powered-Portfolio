@@ -1,5 +1,6 @@
 # Ignore environment variable files
 .env
+.env-prod
 
 # Ignore all Python bytecode files in this directory
 *.cpython-*.pyc
