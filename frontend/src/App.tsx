@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import './App.css'
 import Header from './components/Header'
 import Hero from './components/Hero'
@@ -10,8 +9,6 @@ import Chat from './components/Chat'
 import Footer from './components/Footer'
 
 function App() {
-  const [isChatOpen, setIsChatOpen] = useState(false)
-
   return (
     <div className="app">
       <Header />
@@ -21,24 +18,23 @@ function App() {
         <BuildingToward />
         <Skills />
         <Projects />
+        <section id="ai-chat" className="chat-section" aria-labelledby="ai-chat-title">
+          <div className="container">
+            <div className="chat-section-intro">
+              <p className="section-kicker">AI Portfolio Assistant</p>
+              <h2 id="ai-chat-title" className="section-title">Ask about my experience</h2>
+              <p className="section-intro">
+                Ask about my skills, work experience, projects, technical background,
+                or anything else on this portfolio.
+              </p>
+            </div>
+            <div className="embedded-chat">
+              <Chat />
+            </div>
+          </div>
+        </section>
       </main>
       <Footer />
-      
-      {/* Floating Chat Button */}
-      <button 
-        className="chat-toggle-btn"
-        onClick={() => setIsChatOpen(!isChatOpen)}
-        aria-label={isChatOpen ? "Close AI chat" : "Open AI chat"} title={isChatOpen ? "Close AI chat" : "Open AI chat"}
-      >
-        💬
-      </button>
-      
-      {/* Chat Modal */}
-      {isChatOpen && (
-        <div className="chat-modal">
-          <Chat onClose={() => setIsChatOpen(false)} />
-        </div>
-      )}
     </div>
   )
 }

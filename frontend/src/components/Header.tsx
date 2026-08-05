@@ -8,6 +8,7 @@ const navItems = [
   { id: 'building', label: 'Direction' },
   { id: 'skills', label: 'Skills' },
   { id: 'projects', label: 'Projects' },
+  { id: 'ai-chat', label: 'AI Chat' },
   { id: 'contact', label: 'Contact' },
 ];
 
@@ -41,7 +42,7 @@ const Header: React.FC = () => {
           </button>
           <button className="mobile-menu-toggle" onClick={() => setIsMobileMenuOpen(open => !open)} aria-label="Toggle navigation menu" aria-expanded={isMobileMenuOpen} aria-controls="primary-navigation"><span></span><span></span><span></span></button>
           <nav id="primary-navigation" className={`nav ${isMobileMenuOpen ? 'nav-open' : ''}`} aria-label="Primary navigation">
-            {navItems.map(item => <button key={item.id} onClick={() => scrollToSection(item.id)} className={activeSection === item.id ? 'active' : ''}>{item.label}</button>)}
+            {navItems.map(item => <a key={item.id} href={`#${item.id}`} onClick={() => setIsMobileMenuOpen(false)} className={activeSection === item.id ? 'active' : ''}>{item.label}</a>)}
             <button onClick={toggleTheme} className="theme-toggle" aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
               <span aria-hidden="true">{theme === 'light' ? '☾' : '☀'}</span><span className="theme-label">Theme</span>
             </button>

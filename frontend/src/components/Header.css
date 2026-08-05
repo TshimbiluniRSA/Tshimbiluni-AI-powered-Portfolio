@@ -4,10 +4,10 @@
 .brand-mark { display: grid; place-items: center; width: 2.35rem; height: 2.35rem; border-radius: 10px; background: var(--accent-primary); color: #fff; font-family: var(--font-heading); font-weight: 800; font-size: var(--text-sm); }
 .brand-name { font-family: var(--font-heading); font-weight: 800; letter-spacing: -0.03em; font-size: var(--text-lg); }
 .nav { display: flex; gap: .35rem; align-items: center; }
-.nav button { background: transparent; border: 0; font-size: var(--text-sm); font-weight: 700; color: var(--text-secondary); padding: .55rem .8rem; border-radius: 999px; transition: color .2s, background .2s; }
-.nav button:hover, .nav button.active { color: var(--accent-primary); background: color-mix(in srgb, var(--accent-primary) 10%, transparent); }
+.nav a, .nav button { background: transparent; border: 0; font-size: var(--text-sm); font-weight: 700; color: var(--text-secondary); padding: .55rem .8rem; border-radius: 999px; transition: color .2s, background .2s; }
+.nav a:hover, .nav a.active, .nav button:hover, .nav button.active { color: var(--accent-primary); background: color-mix(in srgb, var(--accent-primary) 10%, transparent); }
 .theme-toggle { display: inline-flex; gap: .4rem; align-items: center; border: 1px solid var(--border-color) !important; background: var(--bg-secondary) !important; color: var(--text-primary) !important; }
 .theme-label { font-size: var(--text-xs); }
 .mobile-menu-toggle { display: none; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: .6rem; flex-direction: column; gap: 4px; }
 .mobile-menu-toggle span { width: 22px; height: 2px; background: var(--text-primary); display: block; }
-@media (max-width: 768px) { .brand-name { display: none; } .mobile-menu-toggle { display: flex; } .nav { position: absolute; top: calc(100% + 1px); left: 1rem; right: 1rem; display: none; flex-direction: column; align-items: stretch; padding: 1rem; border: 1px solid var(--border-color); border-radius: 16px; background: var(--card-bg); box-shadow: 0 18px 45px var(--card-shadow); } .nav.nav-open { display: flex; } .nav button { text-align: left; padding: .85rem 1rem; } }
+@media (max-width: 960px) { .brand-name { display: none; } .mobile-menu-toggle { display: flex; } .nav { position: absolute; top: calc(100% + 1px); left: 1rem; right: 1rem; display: none; flex-direction: column; align-items: stretch; padding: 1rem; border: 1px solid var(--border-color); border-radius: 16px; background: var(--card-bg); box-shadow: 0 18px 45px var(--card-shadow); } .nav.nav-open { display: flex; } .nav a, .nav button { text-align: left; padding: .85rem 1rem; } }

@@ -5,19 +5,18 @@ import { api } from '../api/client';
 import type { ChatMessage } from '../api/client';
 import './Chat.css';
 
-interface ChatProps {
-  onClose: () => void;
-}
-
-const Chat: React.FC<ChatProps> = ({ onClose }) => {
+const Chat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => `session-${Date.now()}`);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesRef.current?.scrollTo({
+      top: messagesRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
   };
 
   useEffect(() => {
@@ -74,12 +73,17 @@ const Chat: React.FC<ChatProps> = ({ onClose }) => {
     <div className="chat-container">
       <div className="chat-header">
         <h3>AI Assistant</h3>
-        <button onClick={onClose} className="close-btn" aria-label="Close chat">
-          ✕
-        </button>
       </div>
 
-      <div className="chat-messages">
+      <div
+        ref={messagesRef}
+        className="chat-messages"
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+        aria-busy={isLoading}
+        aria-label="Conversation history"
+      >
         {messages.length === 0 && (
           <div className="welcome-message">
             <p>
@@ -129,15 +133,15 @@ const Chat: React.FC<ChatProps> = ({ onClose }) => {
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       <div className="chat-input">
         <textarea
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
           placeholder="Type your message..."
+          aria-label="Message the AI portfolio assistant"
           disabled={isLoading}
           rows={1}
         />
@@ -147,7 +151,7 @@ const Chat: React.FC<ChatProps> = ({ onClose }) => {
           className="send-btn"
           aria-label="Send message"
         >
-          ➤
+          Send
         </button>
       </div>
     </div>
