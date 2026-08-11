@@ -61,7 +61,7 @@ async def get_featured_repositories(session: AsyncSession = Depends(get_async_db
             logger.warning(
                 "GitHub refresh failed; serving cached repositories: %s", exc
             )
-            return [repository_response(repo) for repo in cached_repos]
+            return [repository_response(repo, stale=True) for repo in cached_repos]
         logger.warning("GitHub refresh failed and no repository cache exists: %s", exc)
         raise HTTPException(503, "Repository data is temporarily unavailable") from None
 

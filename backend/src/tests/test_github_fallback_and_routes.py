@@ -168,6 +168,7 @@ async def test_repository_refresh_failure_keeps_cached_rows(monkeypatch):
         RepositorySession([[cached]])
     )
     assert response[0]["description"] == "cached"
+    assert response[0]["stale"] is True
 
 
 @pytest.mark.asyncio
