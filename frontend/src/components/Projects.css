@@ -25,4 +25,4 @@
 .projects-more-link:hover { color: var(--accent-secondary); }
 .loading { text-align: center; color: var(--text-secondary); font-size: var(--text-lg); }
 @media (max-width: 768px) { .project-card.featured { grid-column: span 1; padding: 2rem; } }
-@media (max-width: 480px) { .projects-grid { grid-template-columns: 1fr; } .project-card-header { flex-direction: column; } .project-card-header em { white-space: normal; } }
+@media (max-width: 600px) { .projects { padding: 4rem 0; } .projects-grid { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; } .project-card, .project-card.featured { min-width: 0; padding: 1.25rem; } .project-card-header { flex-direction: column; } .project-card-header em { white-space: normal; } .project-footer { align-items: flex-start; } }

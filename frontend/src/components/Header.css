@@ -1,7 +1,7 @@
 .header { position: fixed; inset: 0 0 auto; background: var(--header-bg); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-color); z-index: 1000; padding: .85rem 0; transition: background .3s ease; }
 .header-content { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
 .brand { display: inline-flex; align-items: center; gap: .75rem; background: transparent; border: 0; color: var(--text-primary); padding: 0; }
-.brand-mark { display: grid; place-items: center; width: 2.35rem; height: 2.35rem; border-radius: 10px; background: var(--accent-primary); color: #fff; font-family: var(--font-heading); font-weight: 800; font-size: var(--text-sm); }
+.brand-avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; object-fit: cover; border: 2px solid color-mix(in srgb, var(--accent-primary) 55%, transparent); }
 .brand-name { font-family: var(--font-heading); font-weight: 800; letter-spacing: -0.03em; font-size: var(--text-lg); }
 .nav { display: flex; gap: .35rem; align-items: center; }
 .nav a, .nav button { background: transparent; border: 0; font-size: var(--text-sm); font-weight: 700; color: var(--text-secondary); padding: .55rem .8rem; border-radius: 999px; transition: color .2s, background .2s; }
@@ -10,4 +10,4 @@
 .theme-label { font-size: var(--text-xs); }
 .mobile-menu-toggle { display: none; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: .6rem; flex-direction: column; gap: 4px; }
 .mobile-menu-toggle span { width: 22px; height: 2px; background: var(--text-primary); display: block; }
-@media (max-width: 960px) { .brand-name { display: none; } .mobile-menu-toggle { display: flex; } .nav { position: absolute; top: calc(100% + 1px); left: 1rem; right: 1rem; display: none; flex-direction: column; align-items: stretch; padding: 1rem; border: 1px solid var(--border-color); border-radius: 16px; background: var(--card-bg); box-shadow: 0 18px 45px var(--card-shadow); } .nav.nav-open { display: flex; } .nav a, .nav button { text-align: left; padding: .85rem 1rem; } }
+@media (max-width: 960px) { .brand-name { display: none; } .mobile-menu-toggle { display: flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; } .nav { position: absolute; top: calc(100% + 1px); left: 1rem; right: 1rem; max-height: calc(100vh - 5rem); overflow-y: auto; display: none; flex-direction: column; align-items: stretch; padding: .75rem; border: 1px solid var(--border-color); border-radius: 16px; background: var(--card-bg); box-shadow: 0 18px 45px var(--card-shadow); } .nav.nav-open { display: flex; } .nav a, .nav button { text-align: left; min-height: 44px; padding: .75rem 1rem; } }

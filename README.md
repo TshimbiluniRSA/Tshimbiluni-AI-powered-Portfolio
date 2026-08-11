@@ -30,7 +30,7 @@ SQLite is suitable locally. Set `DATABASE_URL=postgresql+asyncpg://...` in deplo
 
 ## Private S3 CV storage
 
-Place the portfolio PDF at `S3_PUBLIC_CV_KEY` in the private `S3_BUCKET_NAME`. `GET /cv/download` checks the object and returns a short-lived presigned URL with a PDF attachment filename. `POST /cv/upload` validates a visitor PDF, writes a UUID-based temporary S3 object, parses it through OpenAI, persists structured data, and deletes the temporary object when `CV_DELETE_AFTER_PROCESSING=true`. The standard AWS credential provider chain is used; do not configure public bucket ACLs.
+Place the portfolio PDF at `S3_PUBLIC_CV_KEY` in the private `S3_BUCKET_NAME`. `GET /cv/download` checks the object and returns a short-lived presigned URL with a PDF attachment filename. The standard AWS credential provider chain is used; do not configure public bucket ACLs.
 
 ## Database and container
 
