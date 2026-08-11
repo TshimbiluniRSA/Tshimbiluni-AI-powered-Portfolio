@@ -9,7 +9,6 @@ psycopg[binary]==3.2.9
 pydantic==2.11.7
 PyPDF2==3.0.1
 python-dotenv==1.1.1
-python-multipart==0.0.9
 SQLAlchemy==2.0.41
 tenacity==9.1.2
 uvicorn==0.35.0

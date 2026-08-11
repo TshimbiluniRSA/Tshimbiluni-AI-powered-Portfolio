@@ -25,7 +25,7 @@ Confirm configuration without printing the key:
 
 ```bash
 python -c "import os; print('OPENAI_API_KEY:', 'SET' if os.getenv('OPENAI_API_KEY') else 'NOT SET')"
-curl http://localhost:8000/api/chat/health
+curl http://localhost:8000/health
 ```
 
 Rotate the OpenAI key immediately if it is ever disclosed.

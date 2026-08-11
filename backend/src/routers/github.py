@@ -20,15 +20,19 @@ def configured_username():
     return os.getenv("GITHUB_USERNAME", "TshimbiluniRSA")
 
 
-@router.get("/stats", response_model=GitHubStatsResponse)
-async def stats(session: AsyncSession = Depends(get_async_db)):
-    row = (
+async def cached_snapshot(session: AsyncSession):
+    return (
         await session.execute(
             select(GitHubStatsSnapshot).where(
                 GitHubStatsSnapshot.username == configured_username().lower()
             )
         )
     ).scalar_one_or_none()
+
+
+@router.get("/stats", response_model=GitHubStatsResponse)
+async def stats(session: AsyncSession = Depends(get_async_db)):
+    row = await cached_snapshot(session)
     if not row:
         raise HTTPException(404, "GitHub statistics have not been synchronized")
     return serialize(row)
@@ -51,4 +55,8 @@ async def sync(
         row = await save_snapshot(session, data)
         return serialize(row)
     except GitHubError as exc:
+        await session.rollback()
+        row = await cached_snapshot(session)
+        if row:
+            return serialize(row, stale=True)
         raise HTTPException(503, str(exc)) from None

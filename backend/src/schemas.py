@@ -443,6 +443,7 @@ class GitHubStatsResponse(BaseModel):
     top_languages: list[GitHubLanguageStat]
     recent_repositories: list[GitHubRecentRepository]
     last_synced_at: datetime
+    stale: bool = False
 
 
 class CVDownloadResponse(BaseModel):

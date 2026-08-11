@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useGitHubStats } from '../hooks/useGitHubStats';
 import './Header.css';
 
 const navItems = [
@@ -14,6 +15,7 @@ const navItems = [
 
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
+  const { stats } = useGitHubStats();
   const [activeSection, setActiveSection] = useState('hero');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -37,7 +39,7 @@ const Header: React.FC = () => {
       <div className="container">
         <div className="header-content">
           <button className="brand" onClick={() => scrollToSection('hero')} aria-label="Go to home section">
-            <span className="brand-mark">TN</span>
+            <img className="brand-avatar" src={stats?.profile.avatar_url || 'https://github.com/TshimbiluniRSA.png'} alt="Tshimbiluni Nedambale's GitHub profile" />
             <span className="brand-name">Tshimbiluni Nedambale</span>
           </button>
           <button className="mobile-menu-toggle" onClick={() => setIsMobileMenuOpen(open => !open)} aria-label="Toggle navigation menu" aria-expanded={isMobileMenuOpen} aria-controls="primary-navigation"><span></span><span></span><span></span></button>
