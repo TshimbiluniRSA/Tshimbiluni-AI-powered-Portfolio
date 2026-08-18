@@ -54,9 +54,12 @@
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-html { scroll-behavior: smooth; }
-body { min-width: 320px; min-height: 100vh; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-body); }
-#root { width: 100%; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
+body { min-width: 0; min-height: 100vh; overflow-x: hidden; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-body); }
+#root { width: 100%; min-width: 0; }
+section[id], footer[id] { scroll-margin-top: 5rem; }
+img, svg, video { max-width: 100%; }
+pre, code, table, a { overflow-wrap: anywhere; }
 a { font-weight: 600; color: var(--accent-primary); text-decoration: none; transition: color 0.2s ease; }
 a:hover { color: var(--accent-secondary); }
 h1,h2,h3,h4,h5,h6 { margin: 0; font-family: var(--font-heading); letter-spacing: -0.02em; }
@@ -71,4 +74,4 @@ a:focus-visible, button:focus-visible, .btn:focus-visible, .nav button:focus-vis
 ::-webkit-scrollbar-track { background: var(--bg-secondary); }
 ::-webkit-scrollbar-thumb { background: var(--accent-primary); border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-secondary); }
-@media (max-width: 600px) { :root { --text-5xl: 2.5rem; --text-4xl: 2rem; } .container { padding: 0 1.25rem; } }
+@media (max-width: 600px) { :root { --text-5xl: clamp(2.1rem, 11vw, 2.5rem); --text-4xl: 2rem; } .container { padding: 0 1rem; } .section-intro { font-size: var(--text-base); margin-bottom: 2rem; } }

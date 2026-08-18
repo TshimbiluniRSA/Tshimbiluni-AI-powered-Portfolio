@@ -342,7 +342,11 @@ class GitHubService:
         return await self._make_request(endpoint="rate_limit", session=session)
 
     async def fetch_repository_languages(
-        self, owner: str, repo: str, session: Optional[AsyncSession] = None
+        self,
+        owner: str,
+        repo: str,
+        session: Optional[AsyncSession] = None,
+        suppress_errors: bool = True,
     ) -> Dict[str, int]:
         """
         Fetch language breakdown for a repository.
@@ -366,6 +370,8 @@ class GitHubService:
             logger.warning(
                 f"Failed to fetch languages for {safe_owner}/{safe_repo}: {e}"
             )
+            if not suppress_errors:
+                raise
             return {}
 
 
@@ -564,7 +570,9 @@ def normalize_github_repository(
     }
 
 
-def repository_response(repo: GitHubRepository) -> Dict[str, Any]:
+def repository_response(
+    repo: GitHubRepository, *, stale: bool = False
+) -> Dict[str, Any]:
     """Serialize a cached repository in the shape expected by the frontend."""
     return {
         "id": repo.id,
@@ -579,6 +587,7 @@ def repository_response(repo: GitHubRepository) -> Dict[str, Any]:
         "stars": repo.stargazers_count or 0,
         "forks": repo.forks_count or 0,
         "is_featured": repo.is_featured,
+        "stale": stale,
     }
 
 
@@ -680,20 +689,35 @@ async def sync_github_repositories(
         username=username, per_page=100, session=session  # Get up to 100 repos
     )
 
-    saved_repos = []
+    # Finish every remote request before mutating cached rows. A rate limit or
+    # outage midway through collection therefore leaves the complete old cache
+    # untouched rather than producing a partially refreshed view.
+    collected_repos = []
     for repo_data in repos_data:
         # Fetch detailed language data
         languages = await github_service.fetch_repository_languages(
-            owner=username, repo=repo_data["name"], session=session
+            owner=username,
+            repo=repo_data["name"],
+            session=session,
+            suppress_errors=False,
         )
 
+        collected_repos.append((repo_data, languages))
+
+    saved_repos = []
+    for repo_data, languages in collected_repos:
         repo_record = await save_github_repository(
             session=session,
             repo_data=repo_data,
             languages_data=languages,
             owner_username=username,
+            commit=False,
         )
         saved_repos.append(repo_record)
+
+    await session.commit()
+    for repo_record in saved_repos:
+        await session.refresh(repo_record)
 
     logger.info(f"Synced {len(saved_repos)} repositories for {safe_username}")
     return saved_repos
@@ -704,6 +728,7 @@ async def save_github_repository(
     repo_data: Dict[str, Any],
     languages_data: Dict[str, int],
     owner_username: str,
+    commit: bool = True,
 ) -> GitHubRepository:
     """Save or update a GitHub repository."""
     github_id = repo_data["id"]
@@ -726,8 +751,13 @@ async def save_github_repository(
         new_repo = GitHubRepository(**repo_info)
         session.add(new_repo)
 
-    await session.commit()
+    if commit:
+        await session.commit()
+        result = await session.execute(stmt)
+        return result.scalar_one()
 
-    # Return updated record
+    # Flush makes newly inserted rows and updates visible in this transaction,
+    # while leaving the caller in control of the all-or-nothing commit.
+    await session.flush()
     result = await session.execute(stmt)
     return result.scalar_one()

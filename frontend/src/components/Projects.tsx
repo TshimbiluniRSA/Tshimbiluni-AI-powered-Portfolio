@@ -114,13 +114,6 @@ const Projects: React.FC = () => {
         fetchedProjects = await api.repositories.getFeatured();
       } catch (error) {
         console.error('Failed to fetch projects:', error);
-
-        try {
-          const data = await api.repositories.getByUsername('TshimbiluniRSA', 1, 6);
-          fetchedProjects = data.items || [];
-        } catch (fallbackError) {
-          console.error('Fallback fetch failed:', fallbackError);
-        }
       } finally {
         setProjects(buildDisplayProjects(fetchedProjects));
         setLoading(false);

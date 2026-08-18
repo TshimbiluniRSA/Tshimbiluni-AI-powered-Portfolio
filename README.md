@@ -424,7 +424,7 @@ Public S3 ACLs and embedded AWS credentials are intentionally not used.
 
 ## Testing
 
-### Backend
+Place the portfolio PDF at `S3_PUBLIC_CV_KEY` in the private `S3_BUCKET_NAME`. `GET /cv/download` checks the object and returns a short-lived presigned URL with a PDF attachment filename. The standard AWS credential provider chain is used; do not configure public bucket ACLs.
 
 From `backend/src`:
 

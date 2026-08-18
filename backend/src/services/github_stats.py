@@ -211,7 +211,7 @@ async def save_snapshot(session: AsyncSession, data: dict):
     return row
 
 
-def serialize(row):
+def serialize(row, *, stale=False):
     return {
         "username": row.username,
         "profile": row.profile_json,
@@ -234,4 +234,5 @@ def serialize(row):
         "top_languages": row.language_stats_json or [],
         "recent_repositories": row.recent_repositories_json or [],
         "last_synced_at": row.synced_at,
+        "stale": stale,
     }
