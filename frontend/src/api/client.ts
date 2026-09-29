@@ -2,7 +2,7 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://tshimbiluni-ai-powered-portfolio.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.tshimbiluniportfolio.tech';
 const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT) || 30000;
 
 // Create axios instance with default config
