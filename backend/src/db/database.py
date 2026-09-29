@@ -3,6 +3,7 @@ import json
 import os
 import time
 from typing import AsyncGenerator, Optional
+from urllib.parse import parse_qsl, urlencode
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -52,10 +53,32 @@ async def _fetch_database_password_async() -> str:
 def make_sync_database_url(database_url: str) -> str:
     """Convert async SQLAlchemy URLs to sync URLs for sync engines/migrations."""
     if database_url.startswith("postgresql+asyncpg://"):
-        return database_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+        sync_url = database_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+        return _asyncpg_ssl_to_libpq(sync_url)
     if database_url.startswith("sqlite+aiosqlite://"):
         return database_url.replace("sqlite+aiosqlite://", "sqlite://", 1)
     return database_url
+
+
+def _asyncpg_ssl_to_libpq(database_url: str) -> str:
+    """Rename asyncpg's ``ssl`` query option to psycopg/libpq's ``sslmode``.
+
+    asyncpg rejects ``sslmode`` and psycopg rejects ``ssl``, so the same
+    DATABASE_URL cannot serve both drivers without this translation. The URL
+    is edited as text so an encoded password is left untouched.
+    """
+    base, sep, query = database_url.partition("?")
+    if not sep:
+        return database_url
+
+    params = parse_qsl(query, keep_blank_values=True)
+    translated = []
+    for key, value in params:
+        if key == "ssl":
+            key = "sslmode"
+            value = {"true": "require", "false": "disable"}.get(value.lower(), value)
+        translated.append((key, value))
+    return f"{base}?{urlencode(translated)}"
 
 
 SYNC_DATABASE_URL = make_sync_database_url(DATABASE_URL)
