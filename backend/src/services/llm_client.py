@@ -264,8 +264,9 @@ class LLMClient:
             response_content = (response_data.get("content") or "").strip()
             if not response_content:
                 raise LLMClientError("OpenAI returned an empty response")
+            message_id = None
             if session_id and db_session:
-                await self._save_chat_messages(
+                message_id = await self._save_chat_messages(
                     db_session,
                     session_id,
                     message,
@@ -286,6 +287,7 @@ class LLMClient:
             return {
                 "response": response_content,
                 "session_id": session_id,
+                "message_id": message_id,
                 "model": response_data.get("model"),
                 "tokens_used": response_data.get("tokens_used"),
                 "response_time_ms": response_time_ms,
@@ -377,7 +379,8 @@ class LLMClient:
         model_used: Optional[str] = None,
         tokens_used: Optional[int] = None,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> None:
+    ) -> Optional[int]:
+        """Persist the exchange and return the assistant message's ID."""
         try:
             db_session.add(
                 ChatHistory(
@@ -387,21 +390,22 @@ class LLMClient:
                     msg_metadata=metadata or {},
                 )
             )
-            db_session.add(
-                ChatHistory(
-                    session_id=session_id,
-                    message_type=MessageType.ASSISTANT,
-                    content=assistant_message,
-                    response_time_ms=response_time_ms,
-                    tokens_used=tokens_used,
-                    model_used=model_used,
-                    msg_metadata=metadata or {},
-                )
+            assistant = ChatHistory(
+                session_id=session_id,
+                message_type=MessageType.ASSISTANT,
+                content=assistant_message,
+                response_time_ms=response_time_ms,
+                tokens_used=tokens_used,
+                model_used=model_used,
+                msg_metadata=metadata or {},
             )
+            db_session.add(assistant)
             await db_session.commit()
+            return assistant.id
         except Exception as error:
             await db_session.rollback()
             logger.error("Failed to save chat messages: %s", error)
+            return None
 
     async def _log_api_usage(
         self,

@@ -26,7 +26,9 @@ def test_sync_url_uses_libpq_ssl_option(async_url, sync_url):
 
 
 def test_encoded_password_is_left_untouched():
-    url = "postgresql+asyncpg://user:p%40ss%2Fw%3Frd@db.example.com/portfolio?ssl=require"
+    url = (
+        "postgresql+asyncpg://user:p%40ss%2Fw%3Frd@db.example.com/portfolio?ssl=require"
+    )
     assert make_sync_database_url(url) == (
         "postgresql+psycopg://user:p%40ss%2Fw%3Frd@db.example.com/portfolio?sslmode=require"
     )

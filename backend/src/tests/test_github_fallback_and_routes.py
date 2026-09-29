@@ -50,12 +50,42 @@ async def test_successful_github_refresh_updates_cache(monkeypatch):
         assert data["username"] == "TshimbiluniRSA"
         return row
 
+    synced = []
+
+    async def sync_repos(username, _session, force_refresh):
+        synced.append((username, force_refresh))
+
     monkeypatch.setenv("GITHUB_SYNC_TOKEN", "secret")
     monkeypatch.setattr(github.GitHubStatsService, "collect", collect)
     monkeypatch.setattr(github, "save_snapshot", save)
+    monkeypatch.setattr(github, "sync_github_repositories", sync_repos)
     response = await github.sync("secret", Session())
     assert response["profile"]["avatar_url"] == "cached.png"
     assert response["stale"] is False
+    assert synced == [("TshimbiluniRSA", True)]
+
+
+@pytest.mark.asyncio
+async def test_repository_sync_failure_keeps_fresh_stats(monkeypatch):
+    row = snapshot()
+
+    async def collect(_self, _username):
+        return {"username": "TshimbiluniRSA"}
+
+    async def save(_session, _data):
+        return row
+
+    async def sync_repos(*_args, **_kwargs):
+        raise RuntimeError("GitHub rate limited")
+
+    session = Session()
+    monkeypatch.setenv("GITHUB_SYNC_TOKEN", "secret")
+    monkeypatch.setattr(github.GitHubStatsService, "collect", collect)
+    monkeypatch.setattr(github, "save_snapshot", save)
+    monkeypatch.setattr(github, "sync_github_repositories", sync_repos)
+    response = await github.sync("secret", session)
+    assert response["stale"] is False
+    assert session.rolled_back is True
 
 
 @pytest.mark.asyncio
@@ -154,31 +184,35 @@ def repository():
     )
 
 
-@pytest.mark.asyncio
-async def test_repository_refresh_failure_keeps_cached_rows(monkeypatch):
-    from routers import repositories
-
-    cached = repository()
+def fail_if_github_is_called(monkeypatch):
+    from services import github_fetcher
 
     async def fail(*_args, **_kwargs):
-        raise RuntimeError("offline")
+        raise AssertionError("public repository reads must not call GitHub")
 
-    monkeypatch.setattr(repositories, "sync_github_repositories", fail)
+    monkeypatch.setattr(github_fetcher, "sync_github_repositories", fail)
+    monkeypatch.setattr(github_fetcher.github_service, "fetch_user_repositories", fail)
+
+
+@pytest.mark.asyncio
+async def test_featured_repositories_are_served_from_cache(monkeypatch):
+    from routers import repositories
+
+    fail_if_github_is_called(monkeypatch)
+    cached = repository()
     response = await repositories.get_featured_repositories(
         RepositorySession([[cached]])
     )
     assert response[0]["description"] == "cached"
+    # Synced in 2020, so flagged stale but still served.
     assert response[0]["stale"] is True
 
 
 @pytest.mark.asyncio
-async def test_repository_refresh_failure_without_cache_errors(monkeypatch):
+async def test_featured_repositories_without_cache_errors(monkeypatch):
     from routers import repositories
 
-    async def fail(*_args, **_kwargs):
-        raise RuntimeError("offline")
-
-    monkeypatch.setattr(repositories, "sync_github_repositories", fail)
+    fail_if_github_is_called(monkeypatch)
     with pytest.raises(HTTPException) as error:
         await repositories.get_featured_repositories(RepositorySession([[], []]))
     assert error.value.status_code == 503

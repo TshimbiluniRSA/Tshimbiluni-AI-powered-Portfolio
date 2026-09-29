@@ -1,5 +1,8 @@
 # Tshimbiluni AI-Powered Portfolio
 
+[![Backend CI](https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio/actions/workflows/frontend-ci.yml)
+[![Deploy Backend](https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio/actions/workflows/deploy-backend.yml/badge.svg)](https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio/actions/workflows/deploy-backend.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Live](https://img.shields.io/badge/live-tshimbiluniportfolio.tech-2563EB)](https://tshimbiluniportfolio.tech)
 [![FastAPI](https://img.shields.io/badge/FastAPI-production-009688)](https://api.tshimbiluniportfolio.tech/docs)
@@ -7,7 +10,7 @@
 [![AWS](https://img.shields.io/badge/AWS-production-FF9900)](https://github.com/TshimbiluniRSA/my-aws-infrastructure)
 [![Docker](https://img.shields.io/badge/Docker-deployed-2496ED)](backend/src/compose.production.yml)
 
-**At a glance:** A production full-stack portfolio with a React frontend, FastAPI backend, embedded AI assistant, live-synced GitHub data, CV parsing and private S3 downloads — deployed across Render and Terraform-managed AWS infrastructure.
+**At a glance:** A production full-stack portfolio with a React frontend, FastAPI backend, embedded AI assistant, cached GitHub data refreshed daily, and private S3 CV downloads — deployed across Render and Terraform-managed AWS infrastructure.
 
 **Live portfolio:** [tshimbiluniportfolio.tech](https://tshimbiluniportfolio.tech) · **Production API:** [api.tshimbiluniportfolio.tech](https://api.tshimbiluniportfolio.tech) · **Infrastructure:** [my-aws-infrastructure](https://github.com/TshimbiluniRSA/my-aws-infrastructure)
 
@@ -71,12 +74,6 @@ The synchronisation process collects information such as:
 * contribution statistics.
 
 Public visitors read cached application data, while mutation and synchronisation endpoints require a dedicated `X-GitHub-Sync-Token`.
-
-### CV Upload and AI Parsing
-
-A PDF CV can be uploaded through the API and processed into structured portfolio data.
-
-The production upload workflow uses private Amazon S3 storage and removes temporary uploaded objects after processing where configured.
 
 ### Private CV Download
 
@@ -156,7 +153,6 @@ That repository documents the VPC, subnet segmentation, EC2, RDS, S3, IAM, Syste
 | Local Database       | SQLite                                   |
 | AI                   | OpenAI Responses API                     |
 | External Data        | GitHub REST API, GitHub GraphQL API      |
-| Document Processing  | PDF parsing and structured CV extraction |
 | Storage              | Amazon S3                                |
 | Compute              | Amazon EC2                               |
 | Reverse Proxy        | Nginx                                    |
@@ -234,6 +230,14 @@ python -m pip install -r requirements-dev.txt
 alembic upgrade head
 
 uvicorn main:app --reload
+```
+
+Checks run in CI (and locally from `backend/src`):
+
+```bash
+ruff check .
+ruff format --check .
+pytest --cov=.
 ```
 
 For local development, SQLite can be used.
@@ -403,7 +407,9 @@ POST /github/sync
 X-GitHub-Sync-Token: <configured-secret>
 ```
 
-The header value must match `GITHUB_SYNC_TOKEN`.
+The header value must match `GITHUB_SYNC_TOKEN`. A sync refreshes the profile, statistics and featured repositories; if the repository refresh fails, the new statistics are still kept.
+
+The [Sync GitHub Data](.github/workflows/sync-github-data.yml) workflow calls this endpoint daily. It needs a `PORTFOLIO_SYNC_TOKEN` repository secret with the same value as the backend's `GITHUB_SYNC_TOKEN`.
 
 The synchronisation process uses official GitHub REST endpoints and GraphQL contribution data.
 
@@ -470,7 +476,9 @@ The production deployment intentionally uses:
 * private S3 storage;
 * Secrets Manager-managed RDS credentials;
 * HTTPS for public frontend and backend traffic;
-* protected GitHub synchronisation endpoints; and
+* protected GitHub synchronisation endpoints;
+* a public AI chat endpoint that accepts only a message and session ID, with per-visitor and global rate limits so visitors cannot raise its cost;
+* GitHub API paths validated against SSRF and user-supplied values stripped of control characters before logging (covered by tests); and
 * sanitized provider and service errors rather than exposing raw exceptions to visitors.
 
 Infrastructure-level controls are documented in the companion [my-aws-infrastructure](https://github.com/TshimbiluniRSA/my-aws-infrastructure) repository.
