@@ -294,8 +294,11 @@ Production requires an explicit PostgreSQL async connection URL:
 
 ```env
 APP_ENV=production
-DATABASE_URL=postgresql+asyncpg://...
+DATABASE_URL=postgresql+asyncpg://portfolio_admin@<rds-host>:5432/portfolio
+DATABASE_PASSWORD_SECRET_ID=<rds-managed-secret-arn>
 ```
+
+The RDS master password is AWS-managed and rotated every 7 days, so it is never stored in configuration. The backend reads the current password from Secrets Manager whenever it opens a database connection.
 
 Production configuration also includes values such as:
 
@@ -340,6 +343,10 @@ docker compose \
 ```
 
 Migrations should complete successfully before the updated backend is started.
+
+## Continuous Deployment
+
+Merging to `main` deploys the backend automatically. GitHub Actions runs the tests, assumes a narrowly scoped AWS role through OIDC (no stored AWS keys), and uses SSM Run Command to rebuild, migrate, restart and health-check the container on EC2, rolling back to the previous image if health checks fail. The frontend deploys automatically on Render. See [`backend/EC2_DEPLOYMENT.md`](backend/EC2_DEPLOYMENT.md#automated-deployment).
 
 ## Production Docker Deployment
 
