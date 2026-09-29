@@ -1,5 +1,8 @@
+import asyncio
+import json
 import os
-from typing import AsyncGenerator
+import time
+from typing import AsyncGenerator, Optional
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -12,6 +15,38 @@ load_dotenv()
 # Get database URL from environment or use default
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/portfolio.db")
 ASYNC_DATABASE_URL = os.getenv("ASYNC_DATABASE_URL") or DATABASE_URL
+
+# RDS rotates its managed master password every 7 days. When this is set, the
+# password is read from Secrets Manager whenever a connection is opened, and
+# any password in DATABASE_URL is ignored.
+DATABASE_PASSWORD_SECRET_ID = os.getenv("DATABASE_PASSWORD_SECRET_ID")
+PASSWORD_CACHE_SECONDS = 60
+
+_cached_password: Optional[tuple[float, str]] = None
+
+
+def fetch_database_password() -> str:
+    """Return the current database password from Secrets Manager.
+
+    Cached briefly so a burst of new pool connections makes one API call.
+    """
+    global _cached_password
+    now = time.monotonic()
+    if _cached_password and now - _cached_password[0] < PASSWORD_CACHE_SECONDS:
+        return _cached_password[1]
+
+    import boto3
+
+    client = boto3.client("secretsmanager", region_name=os.getenv("AWS_REGION"))
+    secret = client.get_secret_value(SecretId=DATABASE_PASSWORD_SECRET_ID)
+    password = json.loads(secret["SecretString"])["password"]
+    _cached_password = (now, password)
+    return password
+
+
+async def _fetch_database_password_async() -> str:
+    # boto3 is blocking; keep the event loop free while it calls AWS.
+    return await asyncio.to_thread(fetch_database_password)
 
 
 def make_sync_database_url(database_url: str) -> str:
@@ -43,6 +78,9 @@ if is_sqlite:
     async_connect_args = {"check_same_thread": False, "timeout": 30}
     sync_connect_args = {"check_same_thread": False, "timeout": 30}
     engine_kwargs["poolclass"] = StaticPool
+elif DATABASE_PASSWORD_SECRET_ID:
+    # asyncpg calls a password callable on every connection attempt.
+    async_connect_args = {"password": _fetch_database_password_async}
 
 # Create async engine with proper configuration
 async_engine = create_async_engine(

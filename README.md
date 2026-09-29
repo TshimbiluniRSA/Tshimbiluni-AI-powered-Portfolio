@@ -294,8 +294,11 @@ Production requires an explicit PostgreSQL async connection URL:
 
 ```env
 APP_ENV=production
-DATABASE_URL=postgresql+asyncpg://...
+DATABASE_URL=postgresql+asyncpg://portfolio_admin@<rds-host>:5432/portfolio
+DATABASE_PASSWORD_SECRET_ID=<rds-managed-secret-arn>
 ```
+
+The RDS master password is AWS-managed and rotated every 7 days, so it is never stored in configuration. The backend reads the current password from Secrets Manager whenever it opens a database connection.
 
 Production configuration also includes values such as:
 
