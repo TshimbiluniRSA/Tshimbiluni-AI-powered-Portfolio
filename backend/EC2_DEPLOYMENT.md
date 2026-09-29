@@ -2,6 +2,17 @@
 
 This runbook deploys only the FastAPI backend to the existing EC2 host. The frontend remains on Render. Nginx is installed on EC2 but will be configured as the public reverse proxy in a later step.
 
+## Automated deployment
+
+Merges to `main` that change `backend/src/**` or `backend/scripts/**` deploy automatically through `.github/workflows/deploy-backend.yml`:
+
+1. The backend tests run.
+2. The workflow assumes `GitHubPortfolioDeployRole` through GitHub OIDC. The role is defined in [my-aws-infrastructure](https://github.com/TshimbiluniRSA/my-aws-infrastructure), only trusts `main` in this repository, and can only send `AWS-RunShellScript` to the portfolio instance.
+3. SSM Run Command fast-forwards `/opt/portfolio/backend` to the merged commit as `ssm-user` and runs [`backend/scripts/deploy.sh`](scripts/deploy.sh).
+4. The script builds the image, runs migrations, restarts the container and waits for `/health` and `/ready`. If they fail, it restores the previous image and the workflow fails.
+
+The workflow can also be run manually from the Actions tab. The manual steps below remain the reference for first-time setup and for recovering by hand; `bash backend/scripts/deploy.sh` from the checkout performs steps 3–6 in one go.
+
 ## Prerequisites
 
 - Docker Engine and the Docker Compose plugin are installed on EC2.
