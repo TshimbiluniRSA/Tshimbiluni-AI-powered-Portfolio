@@ -9,6 +9,9 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from db import database
 
+# Not a credential: an invented Secrets Manager name the fake client ignores.
+FAKE_SECRET_NAME = "test/portfolio-db"
+
 
 class FakeSecretsManager:
     def __init__(self, passwords):
@@ -24,7 +27,7 @@ def install_fake_boto3(monkeypatch, client):
     fake = types.SimpleNamespace(client=lambda service, region_name=None: client)
     monkeypatch.setitem(sys.modules, "boto3", fake)
     monkeypatch.setattr(database, "_cached_password", None)
-    monkeypatch.setattr(database, "DATABASE_PASSWORD_SECRET_ID", "rds!db-test")
+    monkeypatch.setattr(database, "DATABASE_PASSWORD_SECRET_ID", FAKE_SECRET_NAME)
 
 
 def test_password_is_cached_briefly(monkeypatch):
