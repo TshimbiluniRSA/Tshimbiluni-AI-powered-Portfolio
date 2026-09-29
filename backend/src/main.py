@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +18,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger("main")
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    logger.info("Starting Tshimbiluni AI-powered Portfolio app...")
+    # Production schema changes go through Alembic; create_all only helps
+    # local development start from an empty SQLite database.
+    if os.getenv("APP_ENV", "development") == "development":
+        await init_db()
+        logger.info("Development database tables ensured.")
+    yield
+    logger.info("Shutting down Tshimbiluni AI-powered Portfolio app...")
+    await close_db()
+    logger.info("Database connections closed.")
+
+
 # FastAPI app
 app = FastAPI(
     title="Tshimbiluni AI-powered Portfolio",
@@ -25,12 +41,11 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 # CORS configuration
-default_origins = (
-    "http://localhost:5173,https://tshimbiluni-ai-powered-portfolio-1.onrender.com"
-)
+default_origins = "http://localhost:5173,https://tshimbiluniportfolio.tech"
 origins = [
     origin.strip().rstrip("/")
     for origin in os.getenv("CORS_ORIGINS", default_origins).split(",")
@@ -74,19 +89,3 @@ async def ready():
 @app.get("/", include_in_schema=False)
 async def root():
     return RedirectResponse(url="/docs")
-
-
-# Startup event
-@app.on_event("startup")
-async def on_startup():
-    logger.info("Starting Tshimbiluni AI-powered Portfolio app...")
-    await init_db()
-    logger.info("Database initialized.")
-
-
-# Shutdown event
-@app.on_event("shutdown")
-async def on_shutdown():
-    logger.info("Shutting down Tshimbiluni AI-powered Portfolio app...")
-    await close_db()
-    logger.info("Database connections closed.")
