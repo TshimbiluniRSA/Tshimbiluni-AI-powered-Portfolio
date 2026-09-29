@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { api } from '../api/client';
+import { api, apiErrorMessage, CHAT_MESSAGE_MAX_LENGTH } from '../api/client';
 import type { ChatMessage } from '../api/client';
 import './Chat.css';
 
@@ -9,7 +9,7 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId] = useState(() => `session-${Date.now()}`);
+  const [sessionId] = useState(() => crypto.randomUUID());
   const messagesRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -52,7 +52,7 @@ const Chat: React.FC = () => {
         id: Date.now() + 1,
         session_id: sessionId,
         message_type: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
+        content: apiErrorMessage(error) ?? 'Sorry, I encountered an error. Please try again.',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -140,6 +140,7 @@ const Chat: React.FC = () => {
           placeholder="Type your message..."
           aria-label="Message the AI portfolio assistant"
           disabled={isLoading}
+          maxLength={CHAT_MESSAGE_MAX_LENGTH}
           rows={1}
         />
         <button
