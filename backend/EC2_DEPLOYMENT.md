@@ -45,11 +45,14 @@ vi /opt/portfolio/config/backend.env
 
 Replace every placeholder in `backend.env` with the production value. Enter secrets in the editor; do not use `echo` or command-line arguments that would save secret values in shell history.
 
-The RDS password in `DATABASE_URL` must be URL-encoded. Characters such as `@`, `:`, `/`, `?`, `#`, and `%` cannot appear literally in the password portion of the URL. Keep the `postgresql+asyncpg` driver and use this structure:
+The RDS master password is managed by AWS and rotated automatically every 7 days, so it is not stored in `backend.env`. Leave the password out of `DATABASE_URL` and point `DATABASE_PASSWORD_SECRET_ID` at the RDS-managed secret; the backend and Alembic read the current password from Secrets Manager whenever they open a connection, using the EC2 instance role:
 
 ```text
-postgresql+asyncpg://portfolio_admin:<URL_ENCODED_PASSWORD>@<RDS_HOST>:5432/portfolio
+DATABASE_URL=postgresql+asyncpg://portfolio_admin@<RDS_HOST>:5432/portfolio
+DATABASE_PASSWORD_SECRET_ID=<RDS_MASTER_USER_SECRET_ARN>
 ```
+
+The secret ARN is the `postgres_master_user_secret_arn` output of the infrastructure repository. Without `DATABASE_PASSWORD_SECRET_ID`, the backend uses the password in `DATABASE_URL` (URL-encoded), which stops working at the next rotation.
 
 The repository's `.env.production.example` contains placeholders only and is safe to commit. Actual `.env` and `backend.env` files match the repository's `*.env` ignore rule and must remain untracked.
 
