@@ -476,7 +476,9 @@ The production deployment intentionally uses:
 * private S3 storage;
 * Secrets Manager-managed RDS credentials;
 * HTTPS for public frontend and backend traffic;
-* protected GitHub synchronisation endpoints; and
+* protected GitHub synchronisation endpoints;
+* a public AI chat endpoint that accepts only a message and session ID, with per-visitor and global rate limits so visitors cannot raise its cost;
+* GitHub API paths validated against SSRF and user-supplied values stripped of control characters before logging (covered by tests); and
 * sanitized provider and service errors rather than exposing raw exceptions to visitors.
 
 Infrastructure-level controls are documented in the companion [my-aws-infrastructure](https://github.com/TshimbiluniRSA/my-aws-infrastructure) repository.

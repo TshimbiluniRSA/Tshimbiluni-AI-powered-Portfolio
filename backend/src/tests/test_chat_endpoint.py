@@ -80,7 +80,9 @@ def test_rejects_cost_and_injection_controls(llm, body):
 
 
 def test_provider_errors_are_not_exposed(llm):
-    llm.error = LLMClientError("OpenAI quota or billing limit has been reached (request ID: req_123)")
+    llm.error = LLMClientError(
+        "OpenAI quota or billing limit has been reached (request ID: req_123)"
+    )
     response = post(TestClient(app), {"message": "hi"})
     assert response.status_code == 503
     detail = response.json()["detail"]

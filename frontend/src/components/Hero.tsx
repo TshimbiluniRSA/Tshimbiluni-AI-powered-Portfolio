@@ -1,121 +1,90 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../api/client';
-import { useGitHubStats } from '../hooks/useGitHubStats';
+import { useState } from 'react';
+import { profile } from '../content/profile';
+import { useResumeDownload } from '../hooks/useResumeDownload';
+import { DownloadIcon, GitHubIcon, LinkedInIcon, MailIcon, MapPinIcon } from './icons';
 import './Hero.css';
-const roles = [
-  'Full Stack Development',
-  'Backend Engineering',
-  'AI Engineering',
-  'Automation Systems',
-];
-const fallbackProfile = {
-  name: 'Tshimbiluni Nedambale',
-  initials: 'TN',
-};
-const Hero: React.FC = () => {
-  const { stats, loading, error: statsError } = useGitHubStats();
-  const [downloadLoading, setDownloadLoading] = useState(false),
-    [error, setError] = useState(''),
-    [role, setRole] = useState(0),
-    [avatarFailed, setAvatarFailed] = useState(false);
-  useEffect(() => {
-    const id = setInterval(() => setRole((x) => (x + 1) % roles.length), 2200);
-    return () => clearInterval(id);
-  }, []);
-  const download = async () => {
-    setDownloadLoading(true);
-    setError('');
-    try {
-      const result = await api.cv.download();
-      window.location.assign(result.download_url);
-    } catch {
-      setError('The CV download could not be prepared. Please try again.');
-    } finally {
-      setDownloadLoading(false);
-    }
-  };
+
+export default function Hero() {
+  const { download, downloading, error } = useResumeDownload();
+  const [avatarFailed, setAvatarFailed] = useState(false);
+
   return (
-    <section id="hero" className="hero">
-      <div className="container">
-        <div className="hero-content">
-          <div className="hero-text">
-            <p className="hero-kicker">South African Software Engineer</p>
-            <h1 className="hero-title">
-              Hi, I'm <span className="highlight">Tshimbiluni Nedambale.</span>
-            </h1>
-            <h2 className="hero-subtitle">
-              Software Engineer building AI-powered, full-stack systems.
-            </h2>
-            <p className="hero-description">
-              I build practical software that connects clean interfaces, reliable backend services,
-              databases, automation workflows, and AI integrations.
+    <section className="hero" aria-labelledby="hero-title">
+      <div className="container hero__inner">
+        <div className="hero__content">
+          <p className="hero__status">
+            <span className="hero__status-dot" aria-hidden="true" />
+            {profile.current.title} at {profile.current.company}
+          </p>
+
+          <h1 id="hero-title" className="hero__title">
+            {profile.name}
+          </h1>
+          <p className="hero__role">
+            {profile.role} <span aria-hidden="true">·</span> {profile.focus}
+          </p>
+          <p className="hero__summary">{profile.summary}</p>
+
+          <div className="hero__actions">
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={download}
+              disabled={downloading}
+              aria-busy={downloading}
+            >
+              <DownloadIcon />
+              {downloading ? 'Preparing CV…' : 'Download CV'}
+            </button>
+            <a href="#assistant" className="btn btn--secondary">
+              Ask my AI assistant
+            </a>
+          </div>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
             </p>
-            <div className="role-rotator" aria-live="polite">
-              <span>I work across:</span>
-              <strong>{roles[role]}</strong>
-            </div>
-            <div className="hero-actions">
-              <a href="#ai-chat" className="btn btn-primary">
-                Ask My AI Assistant →
+          )}
+
+          <ul className="hero__links" aria-label="Contact and profiles">
+            <li>
+              <a href={profile.links.github} target="_blank" rel="noopener noreferrer">
+                <GitHubIcon /> GitHub
               </a>
-              <button
-                className="btn btn-tertiary"
-                onClick={download}
-                disabled={downloadLoading}
-                aria-busy={downloadLoading}
-              >
-                {downloadLoading ? 'Preparing download…' : 'Download Resume'}
-              </button>
+            </li>
+            <li>
+              <a href={profile.links.linkedin} target="_blank" rel="noopener noreferrer">
+                <LinkedInIcon /> LinkedIn
+              </a>
+            </li>
+            <li>
+              <a href={`mailto:${profile.links.email}`}>
+                <MailIcon /> {profile.links.email}
+              </a>
+            </li>
+            <li className="hero__location">
+              <MapPinIcon /> {profile.location}
+            </li>
+          </ul>
+        </div>
+
+        <div className="hero__portrait">
+          {avatarFailed ? (
+            <div className="hero__avatar hero__avatar--fallback" aria-hidden="true">
+              TN
             </div>
-            {error && <p role="status">{error}</p>}
-            {statsError && (
-              <p className="github-secondary" role="status">
-                Live GitHub statistics are unavailable. Showing the local profile backup.
-              </p>
-            )}
-            {loading ? (
-              <p>Loading GitHub statistics…</p>
-            ) : stats ? (
-              <div className="github-secondary" aria-label="GitHub statistics">
-                <strong>{stats.profile.public_repositories}</strong> repositories ·{' '}
-                <strong>{stats.repository_stats.total_stars}</strong> stars ·{' '}
-                <strong>{stats.repository_stats.total_forks}</strong> forks ·{' '}
-                <strong>{stats.profile.followers}</strong> followers ·{' '}
-                <strong>{stats.contributions.total}</strong> contributions
-                <br />
-                Top languages:{' '}
-                {stats.top_languages.map((x) => `${x.name} ${x.percentage}%`).join(' · ') ||
-                  'Not available'}
-              </div>
-            ) : null}
-          </div>
-          <div className="hero-profile">
-            {stats?.profile.avatar_url && !avatarFailed ? (
-              <img
-                src={stats.profile.avatar_url}
-                alt={stats.profile.name || stats.username}
-                className="profile-image"
-                onError={() => setAvatarFailed(true)}
-              />
-            ) : (
-              <div
-                className="profile-image profile-image-fallback"
-                role="img"
-                aria-label={`${fallbackProfile.name} profile placeholder`}
-              >
-                {fallbackProfile.initials}
-              </div>
-            )}
-            <div className="profile-card-copy">
-              <span>Backend • AI • Automation</span>
-              <p>
-                Building systems that connect frontend UX, APIs, data, AI workflows, and deployment.
-              </p>
-            </div>
-          </div>
+          ) : (
+            <img
+              className="hero__avatar"
+              src={profile.avatarUrl}
+              alt={`Portrait of ${profile.name}`}
+              width={320}
+              height={320}
+              onError={() => setAvatarFailed(true)}
+            />
+          )}
         </div>
       </div>
     </section>
   );
-};
-export default Hero;
+}

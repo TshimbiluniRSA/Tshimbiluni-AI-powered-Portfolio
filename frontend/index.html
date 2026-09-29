@@ -2,27 +2,61 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tshimbiluni Nedambale · Software Engineer</title>
     <meta
       name="description"
-      content="Tshimbiluni Nedambale - South African software engineer building practical full-stack, backend, automation, and AI-powered systems."
-    />
-    <meta
-      name="keywords"
-      content="Tshimbiluni Nedambale, Full Stack Developer, AI Engineer, Portfolio, React, Python, FastAPI"
+      content="Tshimbiluni Nedambale is a Johannesburg-based software engineer building production Python backends, applied AI and full-stack systems."
     />
     <meta name="author" content="Tshimbiluni Nedambale" />
+    <link rel="canonical" href="https://tshimbiluniportfolio.tech/" />
 
-    <!-- Google Fonts -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#0e7367" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tshimbiluniportfolio.tech/" />
+    <meta property="og:site_name" content="Tshimbiluni Nedambale" />
+    <meta property="og:title" content="Tshimbiluni Nedambale · Software Engineer" />
+    <meta
+      property="og:description"
+      content="Python backend, applied AI and full-stack engineering. Experience, projects and an AI assistant you can ask about my work."
+    />
+    <meta property="og:image" content="https://tshimbiluniportfolio.tech/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Tshimbiluni Nedambale, Software Engineer: Python backend, applied AI and full-stack"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Tshimbiluni Nedambale · Software Engineer" />
+    <meta
+      name="twitter:description"
+      content="Python backend, applied AI and full-stack engineering."
+    />
+    <meta name="twitter:image" content="https://tshimbiluniportfolio.tech/og-image.png" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
 
-    <title>Tshimbiluni Nedambale - Software Engineer</title>
+    <script>
+      // Apply the saved or system theme before first paint to avoid a flash.
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme');
+          var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute(
+            'data-theme',
+            saved === 'light' || saved === 'dark' ? saved : dark ? 'dark' : 'light',
+          );
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
