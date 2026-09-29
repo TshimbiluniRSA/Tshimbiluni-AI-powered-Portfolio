@@ -341,6 +341,10 @@ docker compose \
 
 Migrations should complete successfully before the updated backend is started.
 
+## Continuous Deployment
+
+Merging to `main` deploys the backend automatically. GitHub Actions runs the tests, assumes a narrowly scoped AWS role through OIDC (no stored AWS keys), and uses SSM Run Command to rebuild, migrate, restart and health-check the container on EC2, rolling back to the previous image if health checks fail. The frontend deploys automatically on Render. See [`backend/EC2_DEPLOYMENT.md`](backend/EC2_DEPLOYMENT.md#automated-deployment).
+
 ## Production Docker Deployment
 
 The backend includes a production Compose configuration:
