@@ -352,19 +352,22 @@ class SyncResponse(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    """Schema for chat API requests."""
+    """Schema for chat API requests.
+
+    Only the message and session are accepted: the model, token limits and
+    other generation settings are fixed server-side so visitors cannot raise
+    the cost of a request.
+    """
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     message: str = Field(
-        ..., min_length=1, max_length=10000, description="User message content"
+        ..., min_length=1, max_length=1000, description="User message content"
     )
     session_id: Optional[str] = Field(
-        None, description="Optional session ID to continue conversation"
-    )
-    model: Optional[str] = Field(
-        None, description="Optional model to use for the response"
-    )
-    metadata: Optional[Dict[str, Any]] = Field(
-        None, description="Optional metadata for the request"
+        None,
+        pattern=r"^[A-Za-z0-9-]{8,64}$",
+        description="Optional session ID to continue conversation",
     )
 
 

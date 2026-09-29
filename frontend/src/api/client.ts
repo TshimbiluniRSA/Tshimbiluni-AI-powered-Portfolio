@@ -2,8 +2,7 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 
-const API_URL =
-  import.meta.env.VITE_API_URL || 'https://tshimbiluni-ai-powered-portfolio.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.tshimbiluniportfolio.tech';
 const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT) || 30000;
 
 // Create axios instance with default config
@@ -62,8 +61,18 @@ export interface ChatMessage {
 export interface ChatRequest {
   message: string;
   session_id?: string;
-  model?: string;
-  metadata?: Record<string, unknown>;
+}
+
+/** Keep in sync with ChatRequest.message max_length in backend/src/schemas.py. */
+export const CHAT_MESSAGE_MAX_LENGTH = 1000;
+
+/** Returns the API's user-facing error message, if it sent one. */
+export function apiErrorMessage(error: unknown): string | undefined {
+  if (axios.isAxiosError(error)) {
+    const detail = (error.response?.data as { detail?: unknown } | undefined)?.detail;
+    if (typeof detail === 'string') return detail;
+  }
+  return undefined;
 }
 
 export interface GitHubStats {

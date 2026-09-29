@@ -166,6 +166,7 @@ async def test_llm_chat_response_contract(monkeypatch):
     assert set(result) == {
         "response",
         "session_id",
+        "message_id",
         "model",
         "tokens_used",
         "response_time_ms",
