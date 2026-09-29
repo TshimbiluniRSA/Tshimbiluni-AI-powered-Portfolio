@@ -2,12 +2,12 @@ name: Backend CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, dev ]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, dev ]
     paths:
       - 'backend/**'
 
@@ -87,13 +87,17 @@ jobs:
 
     - name: Test Docker image
       run: |
+        # The image runs as a non-root user that cannot write to /app, so the
+        # throwaway SQLite database lives in /tmp.
         docker run -d --name test-backend -p 8000:8000 \
-          -e DATABASE_URL=sqlite+aiosqlite:///./test.db \
+          -e DATABASE_URL=sqlite+aiosqlite:////tmp/test.db \
           portfolio-backend:${{ github.sha }}
-        sleep 10
-        echo "=== Docker logs for debugging ==="
+        for attempt in {1..15}; do
+          if curl -fsS http://localhost:8000/health && curl -fsS http://localhost:8000/ready; then
+            docker rm -f test-backend
+            exit 0
+          fi
+          sleep 2
+        done
         docker logs test-backend
-        echo "=== End of docker logs ==="
-        curl -f http://localhost:8000/docs || exit 1
-        docker stop test-backend
-        docker rm test-backend
+        exit 1
