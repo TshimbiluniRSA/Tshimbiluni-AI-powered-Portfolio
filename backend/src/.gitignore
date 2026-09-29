@@ -8,3 +8,8 @@
 
 # (Optional) Ignore all __pycache__ folders, which also contain .pyc files
 __pycache__/
+
+# Test coverage data
+.coverage
+coverage.xml
+htmlcov/

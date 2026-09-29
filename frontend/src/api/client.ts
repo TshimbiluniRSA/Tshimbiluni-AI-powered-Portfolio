@@ -26,7 +26,7 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor
@@ -40,7 +40,7 @@ apiClient.interceptors.response.use(
       console.error('Network Error:', error.message);
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Types
@@ -76,10 +76,41 @@ export function apiErrorMessage(error: unknown): string | undefined {
 }
 
 export interface GitHubStats {
-  username: string; profile: { name?: string; avatar_url?: string; profile_url?: string; followers: number; following: number; public_repositories: number };
-  repository_stats: { total_stars:number; total_forks:number; total_watchers:number; total_open_issues:number; total_repository_size_kb:number };
-  contributions: { total:number; commits:number; pull_requests:number; issues:number; pull_request_reviews:number; period_start?:string; period_end?:string };
-  top_languages: Array<{name:string; bytes:number; percentage:number}>; recent_repositories: Array<{name:string; url?:string; updated_at?:string; stars:number; forks:number}>; last_synced_at:string; stale?: boolean;
+  username: string;
+  profile: {
+    name?: string;
+    avatar_url?: string;
+    profile_url?: string;
+    followers: number;
+    following: number;
+    public_repositories: number;
+  };
+  repository_stats: {
+    total_stars: number;
+    total_forks: number;
+    total_watchers: number;
+    total_open_issues: number;
+    total_repository_size_kb: number;
+  };
+  contributions: {
+    total: number;
+    commits: number;
+    pull_requests: number;
+    issues: number;
+    pull_request_reviews: number;
+    period_start?: string;
+    period_end?: string;
+  };
+  top_languages: Array<{ name: string; bytes: number; percentage: number }>;
+  recent_repositories: Array<{
+    name: string;
+    url?: string;
+    updated_at?: string;
+    stars: number;
+    forks: number;
+  }>;
+  last_synced_at: string;
+  stale?: boolean;
 }
 
 // API Methods
@@ -91,7 +122,7 @@ export const api = {
       return response.data;
     },
   },
-  
+
   // Cached portfolio-owner statistics (the browser never receives a GitHub token)
   github: {
     getStats: async (): Promise<GitHubStats> => (await apiClient.get('/github/stats')).data,
@@ -99,12 +130,12 @@ export const api = {
 
   // CV endpoints
   cv: {
-    download: async (): Promise<{download_url:string; expires_in:number; filename:string}> => {
+    download: async (): Promise<{ download_url: string; expires_in: number; filename: string }> => {
       const response = await apiClient.get('/cv/download');
       return response.data;
     },
   },
-  
+
   // Repository endpoints
   repositories: {
     getFeatured: async () => {

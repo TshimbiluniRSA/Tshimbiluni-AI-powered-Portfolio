@@ -686,7 +686,9 @@ async def sync_github_repositories(
     logger.info(f"Fetching repositories for {safe_username} from GitHub API")
 
     repos_data = await github_service.fetch_user_repositories(
-        username=username, per_page=100, session=session  # Get up to 100 repos
+        username=username,
+        per_page=100,
+        session=session,  # Get up to 100 repos
     )
 
     # Finish every remote request before mutating cached rows. A rate limit or

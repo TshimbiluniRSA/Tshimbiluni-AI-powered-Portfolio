@@ -53,7 +53,9 @@ async def _fetch_database_password_async() -> str:
 def make_sync_database_url(database_url: str) -> str:
     """Convert async SQLAlchemy URLs to sync URLs for sync engines/migrations."""
     if database_url.startswith("postgresql+asyncpg://"):
-        sync_url = database_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+        sync_url = database_url.replace(
+            "postgresql+asyncpg://", "postgresql+psycopg://", 1
+        )
         return _asyncpg_ssl_to_libpq(sync_url)
     if database_url.startswith("sqlite+aiosqlite://"):
         return database_url.replace("sqlite+aiosqlite://", "sqlite://", 1)

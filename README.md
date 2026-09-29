@@ -1,5 +1,8 @@
 # Tshimbiluni AI-Powered Portfolio
 
+[![Backend CI](https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio/actions/workflows/frontend-ci.yml)
+[![Deploy Backend](https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio/actions/workflows/deploy-backend.yml/badge.svg)](https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio/actions/workflows/deploy-backend.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Live](https://img.shields.io/badge/live-tshimbiluniportfolio.tech-2563EB)](https://tshimbiluniportfolio.tech)
 [![FastAPI](https://img.shields.io/badge/FastAPI-production-009688)](https://api.tshimbiluniportfolio.tech/docs)
@@ -227,6 +230,14 @@ python -m pip install -r requirements-dev.txt
 alembic upgrade head
 
 uvicorn main:app --reload
+```
+
+Checks run in CI (and locally from `backend/src`):
+
+```bash
+ruff check .
+ruff format --check .
+pytest --cov=.
 ```
 
 For local development, SQLite can be used.

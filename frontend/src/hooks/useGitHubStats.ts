@@ -8,10 +8,15 @@ let statsRequest: Promise<GitHubStats> | null = null;
 function loadStats() {
   if (cachedStats) return Promise.resolve(cachedStats);
   if (!statsRequest) {
-    statsRequest = api.github.getStats().then((stats) => {
-      cachedStats = stats;
-      return stats;
-    }).finally(() => { statsRequest = null; });
+    statsRequest = api.github
+      .getStats()
+      .then((stats) => {
+        cachedStats = stats;
+        return stats;
+      })
+      .finally(() => {
+        statsRequest = null;
+      });
   }
   return statsRequest;
 }
@@ -25,10 +30,18 @@ export function useGitHubStats() {
   useEffect(() => {
     let active = true;
     loadStats()
-      .then((result) => { if (active) setStats(result); })
-      .catch(() => { if (active) setError(true); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+      .then((result) => {
+        if (active) setStats(result);
+      })
+      .catch(() => {
+        if (active) setError(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   return { stats, loading, error };
