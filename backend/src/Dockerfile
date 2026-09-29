@@ -4,6 +4,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && useradd --create-home --uid 10001 appuser
 COPY --chown=appuser:appuser . .
+# The only writable path: local SQLite data (production uses PostgreSQL).
+RUN mkdir -p /app/data && chown appuser:appuser /app/data
 USER appuser
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
