@@ -47,7 +47,9 @@ def _is_stale(repos) -> bool:
 async def get_featured_repositories(session: AsyncSession = Depends(get_async_db)):
     """Return cached featured repositories without calling GitHub."""
     username = configured_username()
-    repos = (await session.execute(_query(username, featured_only=True))).scalars().all()
+    repos = (
+        (await session.execute(_query(username, featured_only=True))).scalars().all()
+    )
     if not repos:
         repos = (await session.execute(_query(username))).scalars().all()
     if not repos:

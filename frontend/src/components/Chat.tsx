@@ -1,111 +1,111 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { FormEvent, KeyboardEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { api, apiErrorMessage, CHAT_MESSAGE_MAX_LENGTH } from '../api/client';
-import type { ChatMessage } from '../api/client';
+import { suggestedQuestions } from '../content/profile';
+import { SendIcon } from './icons';
 import './Chat.css';
 
-const Chat: React.FC = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [sessionId] = useState(() => crypto.randomUUID());
-  const messagesRef = useRef<HTMLDivElement>(null);
+interface Message {
+  key: string;
+  role: 'user' | 'assistant' | 'error';
+  content: string;
+}
 
-  const scrollToBottom = () => {
-    messagesRef.current?.scrollTo({
-      top: messagesRef.current.scrollHeight,
-      behavior: 'smooth',
-    });
-  };
+const COUNTER_THRESHOLD = CHAT_MESSAGE_MAX_LENGTH - 200;
+
+export default function Chat() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sessionId] = useState(() => crypto.randomUUID());
+  const logRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, loading]);
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+  const send = async (text: string) => {
+    const message = text.trim();
+    if (!message || loading) return;
 
-    const userMessage: ChatMessage = {
-      id: Date.now(),
-      session_id: sessionId,
-      message_type: 'user',
-      content: inputValue,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInputValue('');
-    setIsLoading(true);
-
+    setMessages((current) => [
+      ...current,
+      { key: crypto.randomUUID(), role: 'user', content: message },
+    ]);
+    setInput('');
+    setLoading(true);
     try {
-      const response = await api.chat.sendMessage({
-        message: inputValue,
-        session_id: sessionId,
-      });
-
-      setMessages((prev) => [...prev, response]);
+      const reply = await api.chat.sendMessage({ message, session_id: sessionId });
+      setMessages((current) => [
+        ...current,
+        { key: crypto.randomUUID(), role: 'assistant', content: reply.content },
+      ]);
     } catch (error) {
-      console.error('Failed to send message:', error);
-      const errorMessage: ChatMessage = {
-        id: Date.now() + 1,
-        session_id: sessionId,
-        message_type: 'assistant',
-        content: apiErrorMessage(error) ?? 'Sorry, I encountered an error. Please try again.',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((current) => [
+        ...current,
+        {
+          key: crypto.randomUUID(),
+          role: 'error',
+          content:
+            apiErrorMessage(error) ?? 'The assistant could not answer right now. Please try again.',
+        },
+      ]);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+      inputRef.current?.focus();
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    void send(input);
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      void send(input);
     }
   };
 
   return (
-    <div className="chat-container">
-      <div className="chat-header">
-        <h3>AI Assistant</h3>
-      </div>
-
+    <div className="chat">
       <div
-        ref={messagesRef}
-        className="chat-messages"
+        ref={logRef}
+        className="chat__log"
         role="log"
         aria-live="polite"
-        aria-relevant="additions"
-        aria-busy={isLoading}
-        aria-label="Conversation history"
+        aria-busy={loading}
+        aria-label="Conversation with the portfolio assistant"
       >
-        {messages.length === 0 && (
-          <div className="welcome-message">
-            <p>
-              👋 Hi! I'm Tshimbi's portfolio assistant. Ask me about his skills, experience,
-              projects, or career direction. For best results, keep questions short and specific.
-            </p>
+        {messages.length === 0 ? (
+          <div className="chat__empty">
+            <p className="chat__empty-title">Ask anything about my work</p>
+            <p>Try one of these, or write your own question.</p>
+            <div className="chat__suggestions">
+              {suggestedQuestions.map((question) => (
+                <button
+                  key={question}
+                  type="button"
+                  className="chat__suggestion"
+                  onClick={() => void send(question)}
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`message ${message.message_type === 'user' ? 'user-message' : 'assistant-message'}`}
-          >
-            <div className="message-content">
-              {message.message_type === 'user' ? (
-                message.content
-              ) : (
+        ) : (
+          messages.map((message) => (
+            <div key={message.key} className={`chat__message chat__message--${message.role}`}>
+              {message.role === 'assistant' ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    // Open all assistant-provided links in a new tab.
-                    a: ({ href, children }: React.ComponentProps<'a'>) => (
+                    a: ({ href, children }) => (
                       <a href={href} target="_blank" rel="noopener noreferrer">
                         {children}
                       </a>
@@ -114,46 +114,51 @@ const Chat: React.FC = () => {
                 >
                   {message.content}
                 </ReactMarkdown>
+              ) : (
+                <p>{message.content}</p>
               )}
             </div>
-            {message.message_type === 'assistant' && message.response_time_ms && (
-              <div className="message-meta">Responded in {message.response_time_ms}ms</div>
-            )}
-          </div>
-        ))}
-        {isLoading && (
-          <div className="message assistant-message">
-            <div className="message-content typing-indicator">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
+          ))
+        )}
+        {loading && (
+          <div className="chat__message chat__message--assistant chat__typing">
+            <span className="visually-hidden">The assistant is typing</span>
+            <span aria-hidden="true" />
+            <span aria-hidden="true" />
+            <span aria-hidden="true" />
           </div>
         )}
       </div>
 
-      <div className="chat-input">
+      <form className="chat__form" onSubmit={onSubmit}>
+        <label htmlFor="chat-input" className="visually-hidden">
+          Your question
+        </label>
         <textarea
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyPress}
-          placeholder="Type your message..."
-          aria-label="Message the AI portfolio assistant"
-          disabled={isLoading}
+          id="chat-input"
+          ref={inputRef}
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder="Ask a question…"
           maxLength={CHAT_MESSAGE_MAX_LENGTH}
           rows={1}
+          disabled={loading}
         />
         <button
-          onClick={handleSendMessage}
-          disabled={!inputValue.trim() || isLoading}
-          className="send-btn"
-          aria-label="Send message"
+          type="submit"
+          className="btn btn--primary chat__send"
+          disabled={loading || !input.trim()}
+          aria-label="Send question"
         >
-          Send
+          <SendIcon />
         </button>
-      </div>
+        {input.length > COUNTER_THRESHOLD && (
+          <p className="chat__counter" aria-live="polite">
+            {input.length}/{CHAT_MESSAGE_MAX_LENGTH}
+          </p>
+        )}
+      </form>
     </div>
   );
-};
-
-export default Chat;
+}

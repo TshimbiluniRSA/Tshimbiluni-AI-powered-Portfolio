@@ -1,70 +1,84 @@
-import React from 'react';
+import { profile } from '../content/profile';
+import { useResumeDownload } from '../hooks/useResumeDownload';
+import { DownloadIcon, GitHubIcon, LinkedInIcon, MailIcon } from './icons';
 import './Footer.css';
-const Footer: React.FC = () => {
-  const currentYear = new Date().getFullYear();
-  const githubUsername = import.meta.env.VITE_GITHUB_USERNAME || 'TshimbiluniRSA';
+
+export default function Footer() {
+  const { download, downloading, error } = useResumeDownload();
+  const year = new Date().getFullYear();
+
   return (
-    <footer id="contact" className="footer">
-      <div className="container">
-        <div className="footer-cta reveal is-visible">
-          <h2>Let’s build something useful.</h2>
-          <p>
-            I’m interested in full-stack, backend, and AI engineering opportunities where I can help
-            turn complex workflows into simple, reliable software.
-          </p>
-          <div className="footer-cta-actions">
-            <a href="#projects" className="footer-btn primary">
-              View Projects
-            </a>
-            <a
-              href={`https://github.com/${githubUsername}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="footer-btn"
-            >
-              Connect on GitHub
-            </a>
-            <a href="#hero" className="footer-btn">
-              Download Resume
-            </a>
-          </div>
-        </div>
-        <div className="footer-content">
-          <div className="footer-section">
-            <h3>Tshimbiluni Nedambale</h3>
-            <p>
-              AI Engineer / Backend-focused Full Stack Engineer building practical software systems.
+    <>
+      <section id="contact" className="section contact" aria-labelledby="contact-title">
+        <div className="container contact__inner">
+          <div>
+            <span className="eyebrow">Contact</span>
+            <h2 id="contact-title" className="section-title">
+              Let&apos;s talk
+            </h2>
+            <p className="section-lead">
+              I am interested in backend, full-stack and AI engineering roles where I can turn
+              complex workflows into reliable software. Email is the fastest way to reach me.
             </p>
           </div>
-          <div className="footer-section">
-            <h4>Quick Links</h4>
-            <nav className="footer-links">
-              <a href="#hero">Home</a>
-              <a href="#about">About</a>
-              <a href="#building">Direction</a>
-              <a href="#skills">Skills</a>
-              <a href="#projects">Projects</a>
-            </nav>
-          </div>
-          <div className="footer-section">
-            <h4>Connect</h4>
-            <div className="social-links">
+
+          <div className="contact__actions">
+            <a className="btn btn--primary" href={`mailto:${profile.links.email}`}>
+              <MailIcon /> {profile.links.email}
+            </a>
+            <div className="contact__secondary">
               <a
-                href={`https://github.com/${githubUsername}`}
+                className="btn btn--secondary"
+                href={profile.links.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                GitHub
+                <LinkedInIcon /> LinkedIn
               </a>
+              <a
+                className="btn btn--secondary"
+                href={profile.links.github}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <GitHubIcon /> GitHub
+              </a>
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={download}
+                disabled={downloading}
+                aria-busy={downloading}
+              >
+                <DownloadIcon /> {downloading ? 'Preparing…' : 'Download CV'}
+              </button>
             </div>
+            {error && (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            )}
           </div>
         </div>
-        <div className="footer-bottom">
-          <p>&copy; {currentYear} Tshimbiluni Nedambale. All rights reserved.</p>
-          <p>Built with React, TypeScript, FastAPI, and practical AI integration.</p>
+      </section>
+
+      <footer className="site-footer">
+        <div className="container site-footer__inner">
+          <p>
+            © {year} {profile.name}
+          </p>
+          <p>
+            Built with React, FastAPI and PostgreSQL on AWS.{' '}
+            <a
+              href="https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View source
+            </a>
+          </p>
         </div>
-      </div>
-    </footer>
+      </footer>
+    </>
   );
-};
-export default Footer;
+}
