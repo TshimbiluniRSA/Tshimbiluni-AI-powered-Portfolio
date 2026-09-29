@@ -20,7 +20,11 @@ class FakeSecretsManager:
 
     def get_secret_value(self, SecretId):
         self.calls += 1
-        return {"SecretString": json.dumps({"username": "u", "password": self.passwords.pop(0)})}
+        return {
+            "SecretString": json.dumps(
+                {"username": "u", "password": self.passwords.pop(0)}
+            )
+        }
 
 
 def install_fake_boto3(monkeypatch, client):

@@ -42,7 +42,16 @@ const curatedProjects: Record<string, CuratedProject> = {
       'A production-deployed personal portfolio built with React, TypeScript, FastAPI, PostgreSQL, and AI integration. It presents my work and career direction while demonstrating frontend design, backend APIs, database integration, AI features, and deployment on Render.',
     value:
       'Shows my ability to connect frontend, backend, database, AI services, and deployment into one working full-stack application.',
-    tags: ['React', 'TypeScript', 'FastAPI', 'Python', 'PostgreSQL', 'AI Integration', 'Render', 'Docker'],
+    tags: [
+      'React',
+      'TypeScript',
+      'FastAPI',
+      'Python',
+      'PostgreSQL',
+      'AI Integration',
+      'Render',
+      'Docker',
+    ],
     featured: true,
     status: 'Production',
   },
@@ -121,7 +130,8 @@ const Projects: React.FC = () => {
     })();
   }, []);
 
-  const renderableProjects = projects.length >= 3 ? projects : projects.filter((project) => project.featured);
+  const renderableProjects =
+    projects.length >= 3 ? projects : projects.filter((project) => project.featured);
   const showMoreWriteupsNote = projects.length < 3;
 
   return (
@@ -130,7 +140,8 @@ const Projects: React.FC = () => {
         <p className="section-kicker">Case Studies</p>
         <h2 className={`section-title reveal ${isInView ? 'is-visible' : ''}`}>Selected Work</h2>
         <p className="section-subtitle">
-          Selected work that shows how I connect frontend, backend, AI workflows, databases, and deployment into practical software.
+          Selected work that shows how I connect frontend, backend, AI workflows, databases, and
+          deployment into practical software.
         </p>
         {loading ? (
           <p className="loading">Loading projects...</p>
@@ -166,7 +177,12 @@ const Projects: React.FC = () => {
                         ⭐ {project.stars || 0} · 🍴 {project.forks || 0}
                       </span>
                     )}
-                    <a href={project.html_url} target="_blank" rel="noopener noreferrer" className="project-link">
+                    <a
+                      href={project.html_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="project-link"
+                    >
                       View on GitHub →
                     </a>
                   </div>
@@ -174,7 +190,9 @@ const Projects: React.FC = () => {
               ))}
             </div>
             {showMoreWriteupsNote && (
-              <p className="projects-note">More project write-ups are being added as I clean up and document my work.</p>
+              <p className="projects-note">
+                More project write-ups are being added as I clean up and document my work.
+              </p>
             )}
             <div className="projects-more">
               <a

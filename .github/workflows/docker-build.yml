@@ -1,8 +1,9 @@
 name: Docker Build and Push
 
+# Publishes release images to GHCR. Production deploys build on the host
+# (see deploy-backend.yml), so images are only published for version tags.
 on:
   push:
-    branches: [ main ]
     tags:
       - 'v*.*.*'
   workflow_dispatch:
@@ -21,7 +22,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Log in to Container Registry
       uses: docker/login-action@v3

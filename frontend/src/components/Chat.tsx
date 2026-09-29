@@ -35,7 +35,7 @@ const Chat: React.FC = () => {
       updated_at: new Date().toISOString(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
 
@@ -45,7 +45,7 @@ const Chat: React.FC = () => {
         session_id: sessionId,
       });
 
-      setMessages(prev => [...prev, response]);
+      setMessages((prev) => [...prev, response]);
     } catch (error) {
       console.error('Failed to send message:', error);
       const errorMessage: ChatMessage = {
@@ -56,7 +56,7 @@ const Chat: React.FC = () => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -87,9 +87,8 @@ const Chat: React.FC = () => {
         {messages.length === 0 && (
           <div className="welcome-message">
             <p>
-              👋 Hi! I'm Tshimbi's portfolio assistant. Ask me about his skills,
-              experience, projects, or career direction. For best results, keep
-              questions short and specific.
+              👋 Hi! I'm Tshimbi's portfolio assistant. Ask me about his skills, experience,
+              projects, or career direction. For best results, keep questions short and specific.
             </p>
           </div>
         )}
@@ -118,9 +117,7 @@ const Chat: React.FC = () => {
               )}
             </div>
             {message.message_type === 'assistant' && message.response_time_ms && (
-              <div className="message-meta">
-                Responded in {message.response_time_ms}ms
-              </div>
+              <div className="message-meta">Responded in {message.response_time_ms}ms</div>
             )}
           </div>
         ))}
@@ -145,8 +142,8 @@ const Chat: React.FC = () => {
           disabled={isLoading}
           rows={1}
         />
-        <button 
-          onClick={handleSendMessage} 
+        <button
+          onClick={handleSendMessage}
           disabled={!inputValue.trim() || isLoading}
           className="send-btn"
           aria-label="Send message"
