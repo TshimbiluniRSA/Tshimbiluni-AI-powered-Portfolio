@@ -5,8 +5,7 @@
   display: flex;
   justify-content: flex-end;
   padding: 22px var(--margin) 0;
-  /* The photograph is pale sky here in both themes, so the row keeps dark ink. */
-  color: #232221;
+  color: var(--ink);
 }
 
 .site-nav ul {

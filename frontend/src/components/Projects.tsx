@@ -18,20 +18,7 @@ export default function Projects() {
           className={`work__block work__block--${index + 1}`}
           aria-labelledby={`project-${project.id}`}
         >
-          <div className="work__visual" data-reveal>
-            <div className="work__field">
-              <div className="work__frame">
-                <ProjectVisual id={project.id} />
-              </div>
-            </div>
-          </div>
-
           <div className="work__cluster">
-            {project.id === 'portfolio' && (
-              <div className="work__aside" data-reveal style={{ '--i': 1 } as CSSProperties}>
-                <LiveStats />
-              </div>
-            )}
             <h3
               id={`project-${project.id}`}
               className="work__name"
@@ -66,6 +53,18 @@ export default function Projects() {
                   Source code
                 </a>
               </p>
+            </div>
+            {project.id === 'portfolio' && (
+              <div className="work__aside" data-reveal style={{ '--i': 1 } as CSSProperties}>
+                <LiveStats />
+              </div>
+            )}
+          </div>
+          <div className="work__visual" data-reveal>
+            <div className="work__field">
+              <div className="work__frame">
+                <ProjectVisual id={project.id} />
+              </div>
             </div>
           </div>
         </article>
