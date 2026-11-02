@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import type { FormEvent, KeyboardEvent } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState } from 'react';
+import type { FormEvent, KeyboardEvent, Ref } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { api, apiErrorMessage, CHAT_MESSAGE_MAX_LENGTH } from '../api/client';
-import { suggestedQuestions } from '../content/profile';
-import { SendIcon } from './icons';
 import './Chat.css';
 
 interface Message {
@@ -15,7 +13,12 @@ interface Message {
 
 const COUNTER_THRESHOLD = CHAT_MESSAGE_MAX_LENGTH - 200;
 
-export default function Chat() {
+export interface ChatHandle {
+  /** Sends a question as if the visitor had typed it. */
+  ask: (question: string) => void;
+}
+
+export default function Chat({ ref }: { ref?: Ref<ChatHandle> }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -59,6 +62,8 @@ export default function Chat() {
     }
   };
 
+  useImperativeHandle(ref, () => ({ ask: (question: string) => void send(question) }));
+
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     void send(input);
@@ -72,7 +77,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="chat">
+    <div className="chat" data-ui>
       <div
         ref={logRef}
         className="chat__log"
@@ -84,19 +89,10 @@ export default function Chat() {
         {messages.length === 0 ? (
           <div className="chat__empty">
             <p className="chat__empty-title">Ask anything about my work</p>
-            <p>Try one of these, or write your own question.</p>
-            <div className="chat__suggestions">
-              {suggestedQuestions.map((question) => (
-                <button
-                  key={question}
-                  type="button"
-                  className="chat__suggestion"
-                  onClick={() => void send(question)}
-                >
-                  {question}
-                </button>
-              ))}
-            </div>
+            <p>
+              Pick one of the suggested topics, or write your own question below. Answers usually
+              take a few seconds.
+            </p>
           </div>
         ) : (
           messages.map((message) => (
@@ -145,13 +141,8 @@ export default function Chat() {
           rows={1}
           disabled={loading}
         />
-        <button
-          type="submit"
-          className="btn btn--primary chat__send"
-          disabled={loading || !input.trim()}
-          aria-label="Send question"
-        >
-          <SendIcon />
+        <button type="submit" className="chat__send" disabled={loading || !input.trim()}>
+          Send
         </button>
         {input.length > COUNTER_THRESHOLD && (
           <p className="chat__counter" aria-live="polite">
