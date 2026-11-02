@@ -25,7 +25,7 @@ export default function Hero() {
             {profile.name}
           </h1>
           <p className="hero__role" data-load style={{ '--d': '180ms' } as CSSProperties}>
-            {profile.role}, {profile.focus.replace('&', 'and')}
+            {profile.role}, {profile.focus.replace(/&/g, 'and')}
           </p>
           <p className="hero__sentence" data-load style={{ '--d': '260ms' } as CSSProperties}>
             Based in {profile.location}. I build Python backends and applied AI that run in
