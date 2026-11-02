@@ -4,7 +4,7 @@ export const profile = {
   name: 'Tshimbiluni Nedambale',
   role: 'Software Engineer',
   focus: 'Python backend, applied AI & full-stack',
-  location: 'Johannesburg, South Africa',
+  location: 'Roodepoort, Johannesburg',
   summary:
     'I build and run production systems with Python, Django REST Framework, FastAPI, PostgreSQL, Celery and React. Today I work on a high-volume Accounts Payable automation platform: document intelligence, asynchronous processing, integrations and production support.',
   current: {
@@ -84,7 +84,10 @@ export const education = {
 };
 
 export interface Project {
+  id: 'portfolio' | 'infrastructure' | 'multilingual' | 'rag';
   title: string;
+  /** Short display title: two lines at most in a narrow column. */
+  name: string;
   badge: string;
   summary: string;
   problem: string;
@@ -97,7 +100,9 @@ export interface Project {
 
 export const projects: Project[] = [
   {
+    id: 'portfolio',
     title: 'AI-Powered Portfolio Platform',
+    name: 'This portfolio, in production',
     badge: 'In production',
     summary: 'This site: a full-stack application with an AI assistant, running on AWS.',
     problem: 'A CV lists skills; it does not show how I design, ship and operate software.',
@@ -110,7 +115,9 @@ export const projects: Project[] = [
     live: 'https://tshimbiluniportfolio.tech',
   },
   {
+    id: 'infrastructure',
     title: 'AWS Infrastructure as Code',
+    name: 'Infrastructure as code',
     badge: 'Terraform',
     summary: 'The production AWS environment behind this portfolio, fully in Terraform.',
     problem:
@@ -123,7 +130,9 @@ export const projects: Project[] = [
     repo: 'https://github.com/TshimbiluniRSA/my-aws-infrastructure',
   },
   {
+    id: 'multilingual',
     title: 'Multilingual Educational Content Platform',
+    name: 'Learning in home languages',
     badge: 'Top 3 · GDG Build with AI 2026',
     summary: 'Turns English learning material into South African home languages.',
     problem: 'Most educational material is only available in English.',
@@ -135,7 +144,9 @@ export const projects: Project[] = [
     repo: 'https://github.com/TshimbiluniRSA/BuildwithAI-buildathon',
   },
   {
+    id: 'rag',
     title: 'Context-Window-Aware RAG System',
+    name: 'Context-window-aware RAG',
     badge: 'Technical assessment',
     summary: 'Retrieval that respects the limits of an LLM context window.',
     problem: 'An LLM can only use the information that fits in its context window.',
@@ -185,4 +196,26 @@ export const suggestedQuestions = [
   'What AI projects has he built?',
   'How is this portfolio deployed?',
   'What is his experience with AWS?',
+];
+
+/** Photographs from Wikimedia Commons used on the page; credited in the footer. */
+export const photoCredits = [
+  {
+    what: 'Sandton skyline',
+    credit: 'Andres de Wet',
+    license: 'CC BY-SA 3.0',
+    page: 'https://commons.wikimedia.org/wiki/File:SandtonGP-skyline.jpg',
+  },
+  {
+    what: 'Roodepoort station, about 1896',
+    credit: 'unknown photographer',
+    license: 'public domain',
+    page: 'https://commons.wikimedia.org/wiki/File:46_Tonner_no._103_Birkenstock_at_Roodepoort.jpg',
+  },
+  {
+    what: 'Witpoortjie Falls',
+    credit: 'Karen Pagel',
+    license: 'CC BY-SA 4.0',
+    page: 'https://commons.wikimedia.org/wiki/File:Witpoortjie_Falls00.jpg',
+  },
 ];
