@@ -1,28 +1,31 @@
-/* The email as display type, on the darkest stone. */
+/* Contact: one compact band on the darkest stone. */
 .contact {
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
-  min-height: min(84svh, 720px);
-  padding: 40px var(--margin) 32px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--gap);
+  row-gap: 28px;
+  align-items: end;
+  padding: clamp(64px, 7vw, 104px) var(--margin) 40px;
   background: var(--field);
   color: var(--field-ink);
 }
 
 .contact__sentence {
-  max-width: 22ch;
+  grid-column: 1 / -1;
+  max-width: 28ch;
   font-size: var(--step-lead);
   line-height: 1.25;
   letter-spacing: 0;
 }
 
 .contact__email {
-  grid-row: 3;
+  grid-column: 1 / 9;
   display: block;
-  margin-bottom: 10svh;
-  font-size: 10.4vw;
-  line-height: 0.9;
-  letter-spacing: -0.04em;
-  white-space: nowrap;
+  font-size: clamp(1.75rem, 0.9rem + 3.2vw, 3.75rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
   text-decoration: none;
   transition: color var(--t-hover) ease;
 }
@@ -34,10 +37,11 @@
 }
 
 .contact__corners {
-  grid-row: 4;
+  grid-column: 9 / 13;
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 24px;
   font-size: var(--step-small);
 }
 
@@ -47,25 +51,14 @@
 }
 
 @media (max-width: 900px) {
-  .contact {
-    min-height: 0;
-  }
-
-  .contact__email {
-    margin-top: 160px;
-  }
-}
-
-@media (max-width: 720px) {
-  .contact__email {
-    font-size: 15vw;
-    white-space: normal;
-    margin-bottom: 8svh;
+  .contact__email,
+  .contact__corners {
+    grid-column: 1 / -1;
   }
 
   .contact__corners {
+    justify-content: flex-start;
     flex-direction: column;
-    gap: 12px;
     font-size: var(--step-body);
   }
 }

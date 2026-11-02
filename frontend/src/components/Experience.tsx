@@ -1,5 +1,4 @@
 import type { CSSProperties } from 'react';
-import station from '../assets/photos/roodepoort-station-1896.jpg';
 import { education, experience } from '../content/profile';
 import './Experience.css';
 
@@ -10,24 +9,6 @@ export default function Experience() {
         <h2 id="experience-title" className="experience__title" data-reveal>
           <span>Where I have</span> built software
         </h2>
-
-        <figure className="experience__picture" data-reveal style={{ '--i': 2 } as CSSProperties}>
-          <div className="experience__crop">
-            <img
-              src={station}
-              alt="Railway staff and passengers on the platform of Roodepoort station beside a steam locomotive, about 1896"
-              width={1536}
-              height={991}
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
-          <figcaption className="small muted">Roodepoort station, about 1896</figcaption>
-        </figure>
-
-        <p className="experience__word small muted" aria-hidden="true">
-          Roles
-        </p>
 
         <div className="experience__table">
           <ul className="roles" aria-label="Roles">
