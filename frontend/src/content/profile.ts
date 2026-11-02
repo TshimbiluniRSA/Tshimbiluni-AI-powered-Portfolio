@@ -4,7 +4,7 @@ export const profile = {
   name: 'Tshimbiluni Nedambale',
   role: 'Software Engineer',
   focus: 'Python backend, applied AI & full-stack',
-  location: 'Roodepoort, Johannesburg',
+  location: 'Roodepoort, City of Johannesburg',
   summary:
     'I build and run production systems with Python, Django REST Framework, FastAPI, PostgreSQL, Celery and React. Today I work on a high-volume Accounts Payable automation platform: document intelligence, asynchronous processing, integrations and production support.',
   current: {
@@ -196,26 +196,4 @@ export const suggestedQuestions = [
   'What AI projects has he built?',
   'How is this portfolio deployed?',
   'What is his experience with AWS?',
-];
-
-/** Photographs from Wikimedia Commons used on the page; credited in the footer. */
-export const photoCredits = [
-  {
-    what: 'Sandton skyline',
-    credit: 'Andres de Wet',
-    license: 'CC BY-SA 3.0',
-    page: 'https://commons.wikimedia.org/wiki/File:SandtonGP-skyline.jpg',
-  },
-  {
-    what: 'Roodepoort station, about 1896',
-    credit: 'unknown photographer',
-    license: 'public domain',
-    page: 'https://commons.wikimedia.org/wiki/File:46_Tonner_no._103_Birkenstock_at_Roodepoort.jpg',
-  },
-  {
-    what: 'Witpoortjie Falls',
-    credit: 'Karen Pagel',
-    license: 'CC BY-SA 4.0',
-    page: 'https://commons.wikimedia.org/wiki/File:Witpoortjie_Falls00.jpg',
-  },
 ];

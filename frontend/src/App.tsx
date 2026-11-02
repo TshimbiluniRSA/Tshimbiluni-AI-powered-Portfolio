@@ -1,6 +1,5 @@
 import About from './components/About';
 import Assistant from './components/Assistant';
-import Band from './components/Band';
 import Contact from './components/Contact';
 import Experience from './components/Experience';
 import Footer from './components/Footer';
@@ -21,7 +20,6 @@ export default function App() {
         <Projects />
         <Experience />
         <About />
-        <Band />
         <Assistant />
         <Contact />
       </main>

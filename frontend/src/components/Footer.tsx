@@ -1,7 +1,5 @@
-import { photoCredits, profile } from '../content/profile';
+import { profile } from '../content/profile';
 import './Footer.css';
-
-const [firstName, lastName] = profile.name.split(' ');
 
 export default function Footer() {
   const year = new Date().getFullYear();
@@ -78,24 +76,7 @@ export default function Footer() {
             </a>
           </p>
         </div>
-        <div>
-          <p className="site-footer__head">Photographs</p>
-          <ul>
-            {photoCredits.map((photo) => (
-              <li key={photo.page}>
-                <a className="link" href={photo.page} target="_blank" rel="noopener noreferrer">
-                  {photo.what}
-                </a>
-                , {photo.credit}, {photo.license}, via Wikimedia Commons
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
-
-      <p className="site-footer__wordmark" aria-hidden="true">
-        <span>{firstName}</span> <span>{lastName}</span>
-      </p>
       <p className="site-footer__legal">
         © {year} {profile.name}
       </p>
