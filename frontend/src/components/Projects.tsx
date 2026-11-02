@@ -1,89 +1,75 @@
-import { profile, projects } from '../content/profile';
-import { useGitHubStats } from '../hooks/useGitHubStats';
-import { ArrowUpRightIcon, GitHubIcon } from './icons';
+import type { CSSProperties } from 'react';
+import { projects } from '../content/profile';
+import { LiveStats, ProjectVisual } from './ProjectVisuals';
 import './Projects.css';
 
 export default function Projects() {
-  const { stats } = useGitHubStats();
-  const languages = stats?.top_languages.slice(0, 4) ?? [];
-
   return (
-    <section id="projects" className="section section--subtle" aria-labelledby="projects-title">
-      <div className="container">
-        <header className="section-header">
-          <span className="eyebrow">Selected work</span>
-          <h2 id="projects-title" className="section-title">
-            Projects
-          </h2>
-          <p className="section-lead">
-            What each project set out to solve, how it was built and what it achieved.
-          </p>
-        </header>
+    <section id="work" className="section work" aria-labelledby="work-title">
+      <div className="grid">
+        <h2 id="work-title" className="section-title work__title" data-reveal>
+          Four systems I have built
+        </h2>
+      </div>
 
-        <div className="project-grid">
-          {projects.map((project) => (
-            <article key={project.title} className="project-card">
-              <div className="project-card__header">
-                <span className="project-card__badge">{project.badge}</span>
-                <h3 className="project-card__title">{project.title}</h3>
-                <p className="project-card__summary">{project.summary}</p>
+      {projects.map((project, index) => (
+        <article
+          key={project.id}
+          className={`work__block work__block--${index + 1}`}
+          aria-labelledby={`project-${project.id}`}
+        >
+          <div className="work__visual" data-reveal>
+            <div className="work__field">
+              <div className="work__frame">
+                <ProjectVisual id={project.id} />
               </div>
+            </div>
+          </div>
 
-              <dl className="project-card__story">
+          <div className="work__cluster">
+            {project.id === 'portfolio' && (
+              <div className="work__aside" data-reveal style={{ '--i': 1 } as CSSProperties}>
+                <LiveStats />
+              </div>
+            )}
+            <h3
+              id={`project-${project.id}`}
+              className="work__name"
+              data-reveal
+              style={{ '--i': 2 } as CSSProperties}
+            >
+              {project.name}
+            </h3>
+            <div className="work__text" data-reveal style={{ '--i': 3 } as CSSProperties}>
+              <p className="work__summary">{project.summary}</p>
+              <dl className="work__story">
                 <div>
-                  <dt>Problem</dt>
-                  <dd>{project.problem}</dd>
+                  <dt>Problem.</dt> <dd>{project.problem}</dd>
                 </div>
                 <div>
-                  <dt>Approach</dt>
-                  <dd>{project.approach}</dd>
+                  <dt>Approach.</dt> <dd>{project.approach}</dd>
                 </div>
                 <div>
-                  <dt>Result</dt>
-                  <dd>{project.result}</dd>
+                  <dt>Result.</dt> <dd>{project.result}</dd>
                 </div>
               </dl>
-
-              <ul className="tag-list" aria-label="Technologies">
-                {project.tags.map((tag) => (
-                  <li key={tag} className="tag">
-                    {tag}
-                  </li>
-                ))}
-              </ul>
-
-              <div className="project-card__links">
+              <p className="work__meta">
+                {project.badge}. Built with {project.tags.join(', ')}.
+              </p>
+              <p className="work__links">
                 {project.live && (
-                  <a href={project.live} target="_blank" rel="noopener noreferrer">
-                    Live site <ArrowUpRightIcon />
+                  <a className="link" href={project.live} target="_blank" rel="noopener noreferrer">
+                    Live site
                   </a>
                 )}
-                <a href={project.repo} target="_blank" rel="noopener noreferrer">
-                  <GitHubIcon /> Source code
+                <a className="link" href={project.repo} target="_blank" rel="noopener noreferrer">
+                  Source code
                 </a>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <div className="github-strip">
-          <p>
-            {languages.length > 0 ? (
-              <>
-                <span className="github-strip__label">Most used on GitHub:</span>{' '}
-                {languages
-                  .map((language) => `${language.name} ${language.percentage}%`)
-                  .join(' · ')}
-              </>
-            ) : (
-              'More of my code is on GitHub.'
-            )}
-          </p>
-          <a href={profile.links.github} target="_blank" rel="noopener noreferrer">
-            All repositories <ArrowUpRightIcon />
-          </a>
-        </div>
-      </div>
+              </p>
+            </div>
+          </div>
+        </article>
+      ))}
     </section>
   );
 }

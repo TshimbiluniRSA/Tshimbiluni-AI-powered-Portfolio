@@ -1,50 +1,142 @@
+/* One flat field split in half: the live assistant on a square plate, spare text beside it. */
 .assistant {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  align-items: start;
-  gap: 56px;
+  grid-template-columns: 1fr 1fr;
+  min-height: 88svh;
+  margin-top: var(--section);
+  background: var(--surface);
 }
 
-.assistant__intro {
-  position: sticky;
-  top: calc(var(--header-height) + 32px);
-}
-
-.assistant__facts {
+.assistant__plate {
   display: grid;
-  gap: 10px;
-  margin-top: 28px;
-  list-style: none;
+  align-items: center;
+  padding: 40px;
 }
 
-.assistant__facts li {
-  position: relative;
-  padding-left: 28px;
-  color: var(--text-muted);
-  font-size: 0.9375rem;
+.assistant__text {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 48px;
+  padding: 72px var(--margin) 40px 40px;
 }
 
-.assistant__facts li::before {
-  content: '';
-  position: absolute;
-  top: 0.35em;
-  left: 0;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5'/%3E%3C/svg%3E")
-      center / 12px no-repeat,
-    var(--accent);
+.assistant__description {
+  max-width: 34ch;
+  margin-top: 32px;
+  font-size: var(--step-body);
+}
+
+.assistant__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+}
+
+.assistant__tabs button {
+  padding: 6px 0;
+  color: var(--muted);
+  font-size: var(--step-body);
+  text-decoration: underline;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.3em;
+  text-decoration-color: transparent;
+  transition:
+    color var(--t-hover) ease,
+    text-decoration-color var(--t-hover) ease;
+}
+
+.assistant__tabs button[aria-pressed='true'] {
+  color: var(--ink);
+  text-decoration-color: currentColor;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .assistant__tabs button:hover {
+    color: var(--ink);
+  }
+}
+
+.assistant__question {
+  max-width: 24ch;
+  margin-top: 20px;
+  font-size: var(--step-lead);
+  line-height: 1.25;
+}
+
+.assistant__cells {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.assistant__cell {
+  display: flex;
+  align-items: center;
+  min-height: 72px;
+  padding: 0 22px;
+  background: var(--field);
+  color: var(--field-ink);
+  font-size: var(--step-body);
+  text-align: left;
+  transition:
+    transform var(--t-press) var(--ease-out),
+    background-color var(--t-hover) ease;
+}
+
+.assistant__cell--ink {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.assistant__cell:active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .assistant__cell:hover {
+    background: color-mix(in srgb, var(--field) 85%, var(--ink));
+  }
+
+  .assistant__cell--ink:hover {
+    background: var(--accent-strong);
+  }
 }
 
 @media (max-width: 900px) {
   .assistant {
     grid-template-columns: 1fr;
-    gap: 32px;
+    padding-block: 16px 40px;
   }
 
-  .assistant__intro {
-    position: static;
+  /* Heading first, then the plate, then the topics and actions. */
+  .assistant__text {
+    display: contents;
+  }
+
+  .assistant__text > * {
+    order: 2;
+    padding-inline: var(--margin);
+  }
+
+  .assistant__text > :first-child {
+    order: 0;
+    padding-top: 48px;
+  }
+
+  .assistant__plate {
+    order: 1;
+    padding: 28px var(--margin);
+  }
+
+  .assistant__topics {
+    padding-bottom: 28px;
+  }
+
+  .assistant__cells {
+    grid-template-columns: 1fr;
+  }
+
+  .assistant__cell {
+    min-height: 60px;
   }
 }

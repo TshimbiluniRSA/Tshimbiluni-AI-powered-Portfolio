@@ -1,84 +1,104 @@
-import { profile } from '../content/profile';
-import { useResumeDownload } from '../hooks/useResumeDownload';
-import { DownloadIcon, GitHubIcon, LinkedInIcon, MailIcon } from './icons';
+import { photoCredits, profile } from '../content/profile';
 import './Footer.css';
 
+const [firstName, lastName] = profile.name.split(' ');
+
 export default function Footer() {
-  const { download, downloading, error } = useResumeDownload();
   const year = new Date().getFullYear();
 
   return (
-    <>
-      <section id="contact" className="section contact" aria-labelledby="contact-title">
-        <div className="container contact__inner">
-          <div>
-            <span className="eyebrow">Contact</span>
-            <h2 id="contact-title" className="section-title">
-              Let&apos;s talk
-            </h2>
-            <p className="section-lead">
-              I am interested in backend, full-stack and AI engineering roles where I can turn
-              complex workflows into reliable software. Email is the fastest way to reach me.
-            </p>
-          </div>
-
-          <div className="contact__actions">
-            <a className="btn btn--primary" href={`mailto:${profile.links.email}`}>
-              <MailIcon /> {profile.links.email}
-            </a>
-            <div className="contact__secondary">
-              <a
-                className="btn btn--secondary"
-                href={profile.links.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <LinkedInIcon /> LinkedIn
+    <footer className="site-footer">
+      <div className="site-footer__columns">
+        <div>
+          <p className="site-footer__head">On this page</p>
+          <ul>
+            <li>
+              <a className="link" href="#work">
+                Work
               </a>
+            </li>
+            <li>
+              <a className="link" href="#experience">
+                Experience
+              </a>
+            </li>
+            <li>
+              <a className="link" href="#assistant">
+                Assistant
+              </a>
+            </li>
+            <li>
+              <a className="link" href="#contact">
+                Contact
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <p className="site-footer__head">Elsewhere</p>
+          <ul>
+            <li>
               <a
-                className="btn btn--secondary"
+                className="link"
                 href={profile.links.github}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <GitHubIcon /> GitHub
+                GitHub
               </a>
-              <button
-                type="button"
-                className="btn btn--secondary"
-                onClick={download}
-                disabled={downloading}
-                aria-busy={downloading}
+            </li>
+            <li>
+              <a
+                className="link"
+                href={profile.links.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                <DownloadIcon /> {downloading ? 'Preparing…' : 'Download CV'}
-              </button>
-            </div>
-            {error && (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
-            )}
-          </div>
+                LinkedIn
+              </a>
+            </li>
+            <li>
+              <a className="link" href={`mailto:${profile.links.email}`}>
+                Email
+              </a>
+            </li>
+          </ul>
         </div>
-      </section>
-
-      <footer className="site-footer">
-        <div className="container site-footer__inner">
+        <div>
+          <p className="site-footer__head">This site</p>
           <p>
-            © {year} {profile.name}
-          </p>
-          <p>
-            Built with React, FastAPI and PostgreSQL on AWS.{' '}
+            React and TypeScript in front of FastAPI and PostgreSQL on AWS.{' '}
             <a
+              className="link"
               href="https://github.com/TshimbiluniRSA/Tshimbiluni-AI-powered-Portfolio"
               target="_blank"
               rel="noopener noreferrer"
             >
-              View source
+              View the source
             </a>
           </p>
         </div>
-      </footer>
-    </>
+        <div>
+          <p className="site-footer__head">Photographs</p>
+          <ul>
+            {photoCredits.map((photo) => (
+              <li key={photo.page}>
+                <a className="link" href={photo.page} target="_blank" rel="noopener noreferrer">
+                  {photo.what}
+                </a>
+                , {photo.credit}, {photo.license}, via Wikimedia Commons
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <p className="site-footer__wordmark" aria-hidden="true">
+        <span>{firstName}</span> <span>{lastName}</span>
+      </p>
+      <p className="site-footer__legal">
+        © {year} {profile.name}
+      </p>
+    </footer>
   );
 }

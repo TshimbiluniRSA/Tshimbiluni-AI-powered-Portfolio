@@ -1,169 +1,198 @@
 .hero {
   position: relative;
-  padding: 104px 0 96px;
+  display: grid;
+  grid-template-rows: 34svh auto 1fr;
+  min-height: 100svh;
+  overflow: clip;
+}
+
+.hero__picture {
   overflow: hidden;
+  background: #c9d3dc; /* sampled from the sky, so a slow image opens onto its own colour */
 }
 
-/* A faint grid gives the hero depth without competing with the content. */
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image:
-    linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 70% 60% at 70% 30%, #000 20%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 70% 30%, #000 20%, transparent 75%);
-  opacity: 0.6;
-}
-
-.hero__inner {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 64px;
-}
-
-.hero__status {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 24px;
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-muted);
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.hero__status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
-}
-
-.hero__title {
-  font-size: clamp(2.5rem, 6vw, 4rem);
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  line-height: 1.05;
-}
-
-.hero__role {
-  margin-top: 16px;
-  color: var(--text);
-  font-size: clamp(1.125rem, 2.2vw, 1.375rem);
-  font-weight: 600;
-}
-
-.hero__role span {
-  margin: 0 4px;
-  color: var(--text-subtle);
-}
-
-.hero__summary {
-  max-width: 620px;
-  margin-top: 16px;
-  font-size: 1.125rem;
-  line-height: 1.7;
-}
-
-.hero__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 32px;
-}
-
-.hero__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 24px;
-  margin-top: 32px;
-  list-style: none;
-}
-
-.hero__links a,
-.hero__location {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
-  font-size: 0.9375rem;
-  font-weight: 500;
-}
-
-.hero__links a:hover {
-  color: var(--text);
-}
-
-.hero__links svg {
-  width: 18px;
-  height: 18px;
-}
-
-.hero__portrait {
-  position: relative;
-}
-
-.hero__portrait::after {
-  content: '';
-  position: absolute;
-  inset: 16px -16px -16px 16px;
-  z-index: -1;
-  border: 1px solid var(--border-strong);
-  border-radius: 24px;
-}
-
-.hero__avatar {
-  width: 280px;
-  height: 280px;
-  border: 1px solid var(--border);
-  border-radius: 24px;
+.hero__picture img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  background: var(--bg-subtle);
-  box-shadow: var(--shadow-md);
+  object-position: 50% 62%;
 }
 
-.hero__avatar--fallback {
-  display: grid;
-  place-items: center;
-  color: var(--accent);
-  font-size: 4rem;
-  font-weight: 800;
+.hero__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--gap);
+  padding: 24px var(--margin) 0;
+}
+
+.hero__sentence {
+  max-width: 44ch;
+  font-size: var(--step-body);
+  line-height: 1.45;
+}
+
+.hero__action {
+  text-align: right;
+}
+
+.hero__name {
+  align-self: end;
+  padding: 0 var(--margin) 3svh;
+  font-size: min(19vw, 29svh);
+  line-height: 0.84;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+  transform-origin: 0 100%;
+}
+
+.hero__line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.1em;
+  margin-bottom: -0.1em;
+}
+
+.hero__line [data-line] {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 0.12em;
+}
+
+/* The portrait takes the place of a letter at the end of the shorter line. */
+.hero__portrait {
+  width: 0.62em;
+  height: 0.72em;
+  margin-bottom: 0.03em;
+  object-fit: cover;
+  object-position: 50% 30%;
 }
 
 @media (max-width: 900px) {
   .hero {
-    padding: 64px 0 72px;
+    min-height: 0;
   }
 
-  .hero__inner {
-    grid-template-columns: 1fr;
-    gap: 40px;
+  .hero__name {
+    padding-top: 56px;
+  }
+}
+
+@media (max-width: 720px) {
+  .hero {
+    grid-template-rows: 46svh auto 1fr;
   }
 
-  .hero__portrait {
-    order: -1;
+  .hero__row {
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 20px;
   }
 
-  .hero__portrait::after {
-    display: none;
+  .hero__sentence {
+    font-size: var(--step-body);
   }
 
-  .hero__avatar {
-    width: 112px;
-    height: 112px;
-    border-radius: 20px;
+  .hero__action {
+    text-align: left;
   }
 
-  .hero__avatar--fallback {
-    font-size: 2rem;
+  .hero__name {
+    font-size: 18.6vw;
+    padding-top: 24px;
+    padding-bottom: 20px;
+  }
+}
+
+/* Arrival: the picture opens, the name rises line by line, the row follows. */
+@media (prefers-reduced-motion: no-preference) {
+  .js .hero__picture {
+    clip-path: inset(0 0 100% 0);
+    animation: hero-open 1000ms var(--ease-in-out) 120ms forwards;
+  }
+
+  .js .hero__picture img {
+    transform: scale(1.08);
+    animation: hero-settle 1400ms var(--ease-expo) 100ms forwards;
+  }
+
+  .js .hero__line [data-line] {
+    transform: translateY(105%);
+    animation: hero-line 900ms var(--ease-expo) forwards;
+    animation-delay: calc(260ms + var(--i) * 110ms);
+  }
+
+  .js .hero__row > * {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: hero-rise 600ms var(--ease-out) forwards;
+  }
+
+  .js .hero__row > :nth-child(1) {
+    animation-delay: 520ms;
+  }
+
+  .js .hero__row > :nth-child(2) {
+    animation-delay: 600ms;
+  }
+}
+
+@keyframes hero-open {
+  to {
+    clip-path: inset(0);
+  }
+}
+
+@keyframes hero-settle {
+  to {
+    transform: none;
+  }
+}
+
+@keyframes hero-line {
+  to {
+    transform: none;
+  }
+}
+
+@keyframes hero-rise {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Signature move: the monument settles a few percent as the first screen leaves,
+   and the skyline drifts behind it. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hero__name {
+      animation: monument-settle linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100svh;
+    }
+
+    .hero__picture img {
+      translate: 0 0;
+      animation:
+        hero-settle 1400ms var(--ease-expo) 100ms forwards,
+        skyline-drift linear both;
+      animation-timeline: auto, scroll(root);
+      animation-range:
+        normal,
+        0 100svh;
+    }
+  }
+}
+
+@keyframes monument-settle {
+  to {
+    scale: 0.94;
+  }
+}
+
+@keyframes skyline-drift {
+  to {
+    translate: 0 7%;
   }
 }
